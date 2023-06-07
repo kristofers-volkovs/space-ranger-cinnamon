@@ -1,1 +1,1 @@
-# space-ranger-cinnamon
+# Space Ranger Cinnamon

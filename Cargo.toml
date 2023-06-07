@@ -1,0 +1,17 @@
+[package]
+name = "space-ranger-cinnamon"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bevy = { version = "0.10.1", features = ["dynamic_linking"] }  # feature flag must be removed before deployment
+rand = "0.8"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
