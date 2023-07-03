@@ -28,7 +28,23 @@ pub enum PlayerAction {
 }
 
 fn spawn_player(mut commands: Commands) {
+    let mut input_map = InputMap::default();
+
+    input_map.insert(
+        VirtualDPad {
+            up: KeyCode::W.into(),
+            down: KeyCode::S.into(),
+            left: KeyCode::A.into(),
+            right: KeyCode::D.into(),
+        },
+        PlayerAction::Move,
+    );
+    input_map.insert(KeyCode::LShift, PlayerAction::Dash);
+    input_map.insert(KeyCode::Space, PlayerAction::Shoot);
+    input_map.insert(KeyCode::Space, PlayerAction::ChargeShot);
+
     commands.spawn((
+        Name::new("Cinnamon"),
         Player,
         SpriteBundle {
             sprite: Sprite {
@@ -38,6 +54,10 @@ fn spawn_player(mut commands: Commands) {
             },
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
-        }
+        },
+        InputManagerBundle::<PlayerAction> {
+            input_map,
+            ..default()
+        },
     ));
 }
