@@ -1,11 +1,33 @@
 use bevy::{prelude::*, window::WindowResolution};
 
 mod camera;
+const RESOLUTION: f32 = 9.0 / 10.0;
 const WINDOW_HEIGHT: f32 = 1000.0;
 const WINDOW_WIDTH: f32 = WINDOW_HEIGHT * RESOLUTION;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
+pub enum EngineState {
+    MainMenu,
+    LoadingGame,
+    #[default]
+    InGame,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
+pub enum InGameState {
+    #[default]
+    Playing,
+    Paused,
+}
+
 fn main() {
     App::new()
+        // Initial resources
+        .insert_resource(ClearColor(Color::BLACK))
+        // Initial game states
+        .add_state::<EngineState>()
+        .add_state::<InGameState>()
+        // Install plugins
         .add_plugins(
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
