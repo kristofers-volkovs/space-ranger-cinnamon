@@ -1,6 +1,8 @@
 use bevy::{prelude::*, window::WindowResolution};
 
 mod camera;
+mod player;
+
 const RESOLUTION: f32 = 9.0 / 10.0;
 const WINDOW_HEIGHT: f32 = 1000.0;
 const WINDOW_WIDTH: f32 = WINDOW_HEIGHT * RESOLUTION;
@@ -42,5 +44,6 @@ fn main() {
                 }),
         )
         .add_plugin(camera::CameraPlugin)
+        .add_plugin(player::PlayerPlugin)
         .run();
 }
