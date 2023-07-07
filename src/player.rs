@@ -17,6 +17,7 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 (
                     spaceship_movement,
+                    apply_spaceship_velocity,
                     spaceship_shoot,
                     apply_velocity,
                     out_of_bounds_despawn,
@@ -131,7 +132,25 @@ fn spaceship_movement(
     }
 }
 
-fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
+fn apply_spaceship_velocity(
+    mut player_query: Query<(&mut Transform, &Velocity), With<Player>>,
+    time: Res<Time>,
+    win_size: Res<WinSize>,
+) {
+    let (mut transform, velocity) = player_query.single_mut();
+
+    let w_bound = win_size.w / 2.;
+    if (-w_bound > transform.translation.x && velocity.x < 0.)
+        || (w_bound < transform.translation.x && velocity.x > 0.)
+    {
+        // TODO ships velocity should get back to 0 faster when on the border
+        return;
+    }
+
+    transform.translation.x += velocity.x * time.delta_seconds();
+}
+
+fn apply_velocity(mut query: Query<(&mut Transform, &Velocity), Without<Player>>, time: Res<Time>) {
     for (mut transform, velocity) in query.iter_mut() {
         transform.translation.x += velocity.x * time.delta_seconds();
         transform.translation.y += velocity.y * time.delta_seconds();
@@ -146,13 +165,13 @@ fn out_of_bounds_despawn(
     for (entity, transform, movable) in query.iter() {
         if movable.auto_despawn {
             let translation = transform.translation;
-            let h_margin = win_size.h / 2. + DESPAWN_MARGIN;
-            let w_margin = win_size.w / 2. + DESPAWN_MARGIN;
+            let h_bound = win_size.h / 2. + DESPAWN_MARGIN;
+            let w_bound = win_size.w / 2. + DESPAWN_MARGIN;
 
-            if translation.y > h_margin
-                || translation.y < -h_margin
-                || translation.x > w_margin
-                || translation.x < -w_margin
+            if translation.y > h_bound
+                || translation.y < -h_bound
+                || translation.x > w_bound
+                || translation.x < -w_bound
             {
                 commands.entity(entity).despawn();
             }
