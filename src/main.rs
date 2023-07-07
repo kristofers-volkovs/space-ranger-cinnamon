@@ -9,7 +9,7 @@ const WINDOW_HEIGHT: f32 = 1000.0;
 const WINDOW_WIDTH: f32 = WINDOW_HEIGHT * RESOLUTION;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
-pub enum EngineState {
+pub enum GameState {
     MainMenu,
     LoadingGame,
     #[default]
@@ -17,7 +17,7 @@ pub enum EngineState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
-pub enum InGameState {
+pub enum GameplayState {
     #[default]
     Playing,
     Paused,
@@ -28,8 +28,8 @@ fn main() {
         // Initial resources
         .insert_resource(ClearColor(Color::BLACK))
         // Initial game states
-        .add_state::<EngineState>()
-        .add_state::<InGameState>()
+        .add_state::<GameState>()
+        .add_state::<GameplayState>()
         // Install plugins
         .add_plugins(
             DefaultPlugins

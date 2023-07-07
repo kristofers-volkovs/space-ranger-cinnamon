@@ -4,20 +4,20 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::consts::PLAYER_MOVEMENT_SPEED;
-use crate::{EngineState, InGameState};
+use crate::{GameState, GameplayState};
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(InputManagerPlugin::<PlayerAction>::default())
-            .add_system(spawn_player.in_schedule(OnEnter(EngineState::InGame)))
+            .add_system(spawn_player.in_schedule(OnEnter(GameState::InGame)))
             .add_systems((spaceship_movement, apply_velocity).distributive_run_if(is_playing));
     }
 }
 
-fn is_playing(engine: Res<State<EngineState>>, game: Res<State<InGameState>>) -> bool {
-    engine.0 == EngineState::InGame && game.0 == InGameState::Playing
+fn is_playing(engine: Res<State<GameState>>, game: Res<State<GameplayState>>) -> bool {
+    engine.0 == GameState::InGame && game.0 == GameplayState::Playing
 }
 
 // ===
