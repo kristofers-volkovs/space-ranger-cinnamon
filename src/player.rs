@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::consts::{
-    PLAYER_MOVEMENT_SPEED, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
+    DESPAWN_MARGIN, PLAYER_MOVEMENT_SPEED, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
-use crate::{GameState, GameplayState};
+use crate::{GameState, GameplayState, WinSize};
 
 pub struct PlayerPlugin;
 
@@ -15,7 +15,12 @@ impl Plugin for PlayerPlugin {
         app.add_plugin(InputManagerPlugin::<PlayerAction>::default())
             .add_system(spawn_player.in_schedule(OnEnter(GameState::InGame)))
             .add_systems(
-                (spaceship_movement, spaceship_shoot, apply_velocity)
+                (
+                    spaceship_movement,
+                    spaceship_shoot,
+                    apply_velocity,
+                    out_of_bounds_despawn,
+                )
                     .distributive_run_if(is_playing),
             );
     }
@@ -51,6 +56,11 @@ impl Velocity {
     }
 }
 
+#[derive(Component, Debug)]
+struct Movable {
+    auto_despawn: bool,
+}
+
 #[derive(Bundle)]
 struct PlayerBundle {
     player: Player,
@@ -80,6 +90,7 @@ pub struct Projectile;
 struct ProjectileBundle {
     projectile: Projectile,
     velocity: Velocity,
+    movable: Movable,
     #[bundle]
     sprite: SpriteBundle,
 }
@@ -127,6 +138,28 @@ fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>
     }
 }
 
+fn out_of_bounds_despawn(
+    mut commands: Commands,
+    win_size: Res<WinSize>,
+    query: Query<(Entity, &Transform, &Movable)>,
+) {
+    for (entity, transform, movable) in query.iter() {
+        if movable.auto_despawn {
+            let translation = transform.translation;
+            let h_margin = win_size.h / 2. + DESPAWN_MARGIN;
+            let w_margin = win_size.w / 2. + DESPAWN_MARGIN;
+
+            if translation.y > h_margin
+                || translation.y < -h_margin
+                || translation.x > w_margin
+                || translation.x < -w_margin
+            {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
+}
+
 fn spaceship_shoot(
     mut commands: Commands,
     player_query: Query<(&ActionState<PlayerAction>, &Transform), With<Player>>,
@@ -140,6 +173,7 @@ fn spaceship_shoot(
                 x: 0.,
                 y: PLAYER_PROJECTILE_SPEED,
             },
+            movable: Movable { auto_despawn: true },
             sprite: SpriteBundle {
                 sprite: Sprite {
                     color: Color::rgb(1., 0.5, 1.),
