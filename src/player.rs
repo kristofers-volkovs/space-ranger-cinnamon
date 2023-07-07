@@ -12,8 +12,8 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(InputManagerPlugin::<PlayerAction>::default())
-            .add_system(spawn_player.in_schedule(OnEnter(GameState::InGame)))
+        app.add_plugin(InputManagerPlugin::<SpaceshipAction>::default())
+            .add_system(spawn_spaceship.in_schedule(OnEnter(GameState::InGame)))
             .add_systems(
                 (
                     spaceship_movement,
@@ -34,10 +34,10 @@ fn is_playing(engine: Res<State<GameState>>, game: Res<State<GameplayState>>) ->
 // ===
 
 #[derive(Component, Debug)]
-pub struct Player;
+pub struct Spaceship;
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
-pub enum PlayerAction {
+pub enum SpaceshipAction {
     MoveRight,
     MoveLeft,
     Dash,
@@ -63,23 +63,23 @@ struct Movable {
 }
 
 #[derive(Bundle)]
-struct PlayerBundle {
-    player: Player,
+struct SpaceshipBundle {
+    spaceship: Spaceship,
     velocity: Velocity,
     #[bundle]
-    input_manager: InputManagerBundle<PlayerAction>,
+    input_manager: InputManagerBundle<SpaceshipAction>,
     #[bundle]
     sprite: SpriteBundle,
 }
 
-impl PlayerBundle {
-    fn default_input_map() -> InputMap<PlayerAction> {
+impl SpaceshipBundle {
+    fn default_input_map() -> InputMap<SpaceshipAction> {
         InputMap::new([
-            (KeyCode::A, PlayerAction::MoveLeft),
-            (KeyCode::D, PlayerAction::MoveRight),
-            (KeyCode::LShift, PlayerAction::Dash),
-            (KeyCode::Space, PlayerAction::Shoot),
-            (KeyCode::Space, PlayerAction::ChargeShot),
+            (KeyCode::A, SpaceshipAction::MoveLeft),
+            (KeyCode::D, SpaceshipAction::MoveRight),
+            (KeyCode::LShift, SpaceshipAction::Dash),
+            (KeyCode::Space, SpaceshipAction::Shoot),
+            (KeyCode::Space, SpaceshipAction::ChargeShot),
         ])
     }
 }
@@ -98,12 +98,12 @@ struct ProjectileBundle {
 
 // ===
 
-fn spawn_player(mut commands: Commands) {
-    commands.spawn(PlayerBundle {
-        player: Player,
+fn spawn_spaceship(mut commands: Commands) {
+    commands.spawn(SpaceshipBundle {
+        spaceship: Spaceship,
         velocity: Velocity::new(),
         input_manager: InputManagerBundle {
-            input_map: PlayerBundle::default_input_map(),
+            input_map: SpaceshipBundle::default_input_map(),
             ..default()
         },
         sprite: SpriteBundle {
@@ -119,21 +119,21 @@ fn spawn_player(mut commands: Commands) {
 }
 
 fn spaceship_movement(
-    mut player_query: Query<(&ActionState<PlayerAction>, &mut Velocity), With<Player>>,
+    mut player_query: Query<(&ActionState<SpaceshipAction>, &mut Velocity), With<Spaceship>>,
 ) {
     let (action_state, mut velocity) = player_query.single_mut();
 
-    if action_state.pressed(PlayerAction::MoveRight) {
+    if action_state.pressed(SpaceshipAction::MoveRight) {
         velocity.x += PLAYER_MOVEMENT_SPEED;
     }
 
-    if action_state.pressed(PlayerAction::MoveLeft) {
+    if action_state.pressed(SpaceshipAction::MoveLeft) {
         velocity.x -= PLAYER_MOVEMENT_SPEED;
     }
 }
 
 fn apply_spaceship_velocity(
-    mut player_query: Query<(&mut Transform, &Velocity), With<Player>>,
+    mut player_query: Query<(&mut Transform, &Velocity), With<Spaceship>>,
     time: Res<Time>,
     win_size: Res<WinSize>,
 ) {
@@ -150,7 +150,7 @@ fn apply_spaceship_velocity(
     transform.translation.x += velocity.x * time.delta_seconds();
 }
 
-fn apply_velocity(mut query: Query<(&mut Transform, &Velocity), Without<Player>>, time: Res<Time>) {
+fn apply_velocity(mut query: Query<(&mut Transform, &Velocity), Without<Spaceship>>, time: Res<Time>) {
     for (mut transform, velocity) in query.iter_mut() {
         transform.translation.x += velocity.x * time.delta_seconds();
         transform.translation.y += velocity.y * time.delta_seconds();
@@ -181,11 +181,11 @@ fn out_of_bounds_despawn(
 
 fn spaceship_shoot(
     mut commands: Commands,
-    player_query: Query<(&ActionState<PlayerAction>, &Transform), With<Player>>,
+    player_query: Query<(&ActionState<SpaceshipAction>, &Transform), With<Spaceship>>,
 ) {
     let (action_state, transform) = player_query.single();
 
-    if action_state.just_pressed(PlayerAction::Shoot) {
+    if action_state.just_pressed(SpaceshipAction::Shoot) {
         commands.spawn(ProjectileBundle {
             projectile: Projectile,
             velocity: Velocity {
