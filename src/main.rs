@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::WindowResolution};
 
 mod camera;
+mod consts;
 mod player;
 
 const RESOLUTION: f32 = 9.0 / 10.0;
