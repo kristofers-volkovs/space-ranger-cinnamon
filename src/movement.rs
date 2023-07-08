@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::player::{is_playing, Spaceship};
+use crate::{is_playing, player::Spaceship};
 
 pub struct MovementPlugin;
 
@@ -9,7 +9,6 @@ impl Plugin for MovementPlugin {
         app.add_system(
             apply_velocity
                 .run_if(is_playing)
-                .in_set(MovementSet::ApplyVelocity)
                 .after(MovementSet::UpdateVelocity),
         );
     }
@@ -18,7 +17,6 @@ impl Plugin for MovementPlugin {
 #[derive(SystemSet, Clone, Hash, Debug, Eq, PartialEq)]
 pub enum MovementSet {
     UpdateVelocity,
-    ApplyVelocity,
 }
 
 #[derive(Component, Debug)]

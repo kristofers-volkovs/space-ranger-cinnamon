@@ -6,6 +6,7 @@ use consts::{WINDOW_HEIGHT, WINDOW_WIDTH};
 
 mod camera;
 mod consts;
+mod enemy;
 mod movement;
 mod player;
 
@@ -22,6 +23,10 @@ pub enum GameplayState {
     #[default]
     Playing,
     Paused,
+}
+
+pub fn is_playing(game: Res<State<GameState>>, gameplay: Res<State<GameplayState>>) -> bool {
+    matches!(game.0, GameState::InGame) && matches!(gameplay.0, GameplayState::Playing)
 }
 
 fn main() {
@@ -49,6 +54,7 @@ fn main() {
         )
         .add_plugin(camera::CameraPlugin)
         .add_plugin(player::PlayerPlugin)
+        .add_plugin(enemy::EnemyPlugin)
         .add_plugin(movement::MovementPlugin)
         .run();
 }

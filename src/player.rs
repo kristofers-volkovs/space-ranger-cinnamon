@@ -9,7 +9,7 @@ use crate::consts::{
     PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
-use crate::{GameState, GameplayState, WinSize};
+use crate::{is_playing, GameState, WinSize};
 
 pub struct PlayerPlugin;
 
@@ -25,15 +25,10 @@ impl Plugin for PlayerPlugin {
             .add_system(
                 apply_spaceship_velocity
                     .run_if(is_playing)
-                    .in_set(MovementSet::ApplyVelocity)
                     .after(MovementSet::UpdateVelocity),
             )
             .add_systems((spaceship_shoot, out_of_bounds_despawn).distributive_run_if(is_playing));
     }
-}
-
-pub fn is_playing(engine: Res<State<GameState>>, game: Res<State<GameplayState>>) -> bool {
-    engine.0 == GameState::InGame && game.0 == GameplayState::Playing
 }
 
 // ===
@@ -226,7 +221,7 @@ fn spawn_spaceship(mut commands: Commands) {
         sprite: SpriteBundle {
             sprite: Sprite {
                 color: Color::rgb(1., 1., 1.),
-                custom_size: Some(Vec2 { x: 50., y: 50. }),
+                custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..default()
             },
             transform: Transform::from_xyz(0., PLAYER_POSITION, PLAYER_Z),
