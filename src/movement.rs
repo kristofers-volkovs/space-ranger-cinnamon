@@ -17,7 +17,6 @@ impl Plugin for MovementPlugin {
 
 #[derive(SystemSet, Clone, Hash, Debug, Eq, PartialEq)]
 pub enum MovementSet {
-    InitAction,
     UpdateVelocity,
     ApplyVelocity,
 }

@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::consts::{
-    DESPAWN_MARGIN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN, PLAYER_MOVEMENT_SPEED,
-    PLAYER_POSITION, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
+    DESPAWN_MARGIN, PLAYER_DASH_COOLDOWN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN,
+    PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
 use crate::{GameState, GameplayState, WinSize};
@@ -17,15 +17,9 @@ impl Plugin for PlayerPlugin {
         app.add_plugin(InputManagerPlugin::<SpaceshipAction>::default())
             .add_system(spawn_spaceship.in_schedule(OnEnter(GameState::InGame)))
             .add_system(
-                spaceship_dash
+                spaceship_movement
                     .run_if(is_playing)
-                    .in_set(MovementSet::InitAction),
-            )
-            .add_systems(
-                (spaceship_movement, apply_spaceship_dash_to_velocity)
-                    .distributive_run_if(is_playing)
-                    .in_set(MovementSet::UpdateVelocity)
-                    .after(MovementSet::InitAction),
+                    .in_set(MovementSet::UpdateVelocity),
             )
             .add_system(
                 apply_spaceship_velocity
@@ -53,16 +47,6 @@ pub enum SpaceshipAction {
     Dash,
     Shoot,
     ChargeShot,
-}
-
-#[derive(Bundle)]
-struct SpaceshipBundle {
-    spaceship: Spaceship,
-    velocity: Velocity,
-    #[bundle]
-    input_manager: InputManagerBundle<SpaceshipAction>,
-    #[bundle]
-    sprite: SpriteBundle,
 }
 
 impl SpaceshipBundle {
@@ -95,14 +79,14 @@ struct Point {
 }
 
 #[derive(Component, Debug)]
-pub struct SpaceshipDash {
+pub struct Dash {
     direction: Direction,
     timer: Timer,
 }
 
-impl SpaceshipDash {
+impl Dash {
     fn new(direction: Direction) -> Self {
-        SpaceshipDash {
+        Self {
             direction,
             timer: Timer::from_seconds(PLAYER_DASH_TIME_LEN, TimerMode::Once),
         }
@@ -157,12 +141,44 @@ impl SpaceshipDash {
     }
 }
 
+#[derive(Component, Debug)]
+enum DashState {
+    Idle,
+    Dashing(Dash),
+    Cooldown(Timer),
+}
+
+#[derive(Component, Debug)]
+pub struct SpaceshipDash {
+    state: DashState,
+}
+
+impl SpaceshipDash {
+    fn new() -> Self {
+        Self {
+            state: DashState::Idle,
+        }
+    }
+}
+
+#[derive(Bundle)]
+struct SpaceshipBundle {
+    spaceship: Spaceship,
+    velocity: Velocity,
+    dash: SpaceshipDash,
+    #[bundle]
+    input_manager: InputManagerBundle<SpaceshipAction>,
+    #[bundle]
+    sprite: SpriteBundle,
+}
+
 // ===
 
 fn spawn_spaceship(mut commands: Commands) {
     commands.spawn(SpaceshipBundle {
         spaceship: Spaceship,
         velocity: Velocity::new(),
+        dash: SpaceshipDash::new(),
         input_manager: InputManagerBundle {
             input_map: SpaceshipBundle::default_input_map(),
             ..default()
@@ -180,25 +196,17 @@ fn spawn_spaceship(mut commands: Commands) {
 }
 
 fn spaceship_movement(
-    mut player_query: Query<(&ActionState<SpaceshipAction>, &mut Velocity), With<Spaceship>>,
+    mut player_query: Query<
+        (
+            &ActionState<SpaceshipAction>,
+            &mut Velocity,
+            &mut SpaceshipDash,
+        ),
+        With<Spaceship>,
+    >,
+    time: Res<Time>,
 ) {
-    let (action_state, mut velocity) = player_query.single_mut();
-
-    if action_state.pressed(SpaceshipAction::MoveRight) {
-        velocity.x += PLAYER_MOVEMENT_SPEED;
-    }
-
-    if action_state.pressed(SpaceshipAction::MoveLeft) {
-        velocity.x -= PLAYER_MOVEMENT_SPEED;
-    }
-}
-
-fn spaceship_dash(
-    mut commands: Commands,
-    player_query: Query<(Entity, &ActionState<SpaceshipAction>), With<Spaceship>>,
-) {
-
-    let (entity, action_state) = player_query.single();
+    let (action_state, mut velocity, mut spaceship_dash) = player_query.single_mut();
 
     if action_state.just_pressed(SpaceshipAction::Dash) {
         let direction = {
@@ -206,30 +214,44 @@ fn spaceship_dash(
                 Some(Direction::Right)
             } else if action_state.pressed(SpaceshipAction::MoveLeft) {
                 Some(Direction::Left)
+            } else if velocity.x > 0.0 {
+                Some(Direction::Right)
+            } else if velocity.x < 0.0 {
+                Some(Direction::Left)
             } else {
                 None
             }
         };
 
         if let Some(d) = direction {
-            // TODO spawn dash cooldown timer
-            commands.entity(entity).insert(SpaceshipDash::new(d));
+            spaceship_dash.state = DashState::Dashing(Dash::new(d));
         }
     }
-}
 
-fn apply_spaceship_dash_to_velocity(
-    mut commands: Commands,
-    mut player_query: Query<(Entity, &mut Velocity, &mut SpaceshipDash), With<Spaceship>>,
-    time: Res<Time>,
-) {
-    for (entity, mut velocity, mut spaceship_dash) in player_query.iter_mut() {
-        match spaceship_dash.calc_boost(&time) {
+    match &mut spaceship_dash.state {
+        DashState::Idle => {
+            if action_state.pressed(SpaceshipAction::MoveRight) {
+                velocity.x += PLAYER_MOVEMENT_SPEED;
+            }
+
+            if action_state.pressed(SpaceshipAction::MoveLeft) {
+                velocity.x -= PLAYER_MOVEMENT_SPEED;
+            }
+        }
+        DashState::Dashing(ref mut dash) => match dash.calc_boost(&time) {
             Some(velocity_boost) => {
                 velocity.x += velocity_boost;
             }
             None => {
-                commands.entity(entity).remove::<SpaceshipDash>();
+                spaceship_dash.state =
+                    DashState::Cooldown(Timer::from_seconds(PLAYER_DASH_COOLDOWN, TimerMode::Once));
+            }
+        },
+        DashState::Cooldown(ref mut timer) => {
+            timer.tick(time.delta());
+
+            if timer.finished() {
+                spaceship_dash.state = DashState::Idle;
             }
         }
     }
@@ -279,29 +301,29 @@ fn spaceship_shoot(
     mut commands: Commands,
     player_query: Query<(&ActionState<SpaceshipAction>, &Transform), With<Spaceship>>,
 ) {
-    let (action_state, transform) = player_query.single();
-
-    if action_state.just_pressed(SpaceshipAction::Shoot) {
-        // TODO spawn shoot cooldown timer
-
-        commands.spawn(ProjectileBundle {
-            projectile: Projectile,
-            velocity: Velocity {
-                x: 0.,
-                y: PLAYER_PROJECTILE_SPEED,
-            },
-            movable: Movable { auto_despawn: true },
-            sprite: SpriteBundle {
-                sprite: Sprite {
-                    color: Color::rgb(1., 0.5, 1.),
-                    custom_size: Some(Vec2 { x: 10., y: 20. }),
+    if let Ok((action_state, transform)) = player_query.get_single() {
+        if action_state.just_pressed(SpaceshipAction::Shoot) {
+            commands.spawn(ProjectileBundle {
+                projectile: Projectile,
+                velocity: Velocity {
+                    x: 0.,
+                    y: PLAYER_PROJECTILE_SPEED,
+                },
+                movable: Movable { auto_despawn: true },
+                sprite: SpriteBundle {
+                    sprite: Sprite {
+                        color: Color::rgb(1., 0.5, 1.),
+                        custom_size: Some(Vec2 { x: 10., y: 20. }),
+                        ..default()
+                    },
+                    transform: Transform::from_translation(
+                        transform.translation * Vec2::ONE.extend(PLAYER_PROJECTILE_Z),
+                    ),
                     ..default()
                 },
-                transform: Transform::from_translation(
-                    transform.translation * Vec2::ONE.extend(PLAYER_PROJECTILE_Z),
-                ),
-                ..default()
-            },
-        });
+            });
+
+            // commands.entity(entity).insert(SpaceshipFiringCooldown::new());
+        }
     }
 }
