@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::consts::{
-    DESPAWN_MARGIN, PLAYER_MOVEMENT_SPEED, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
+    DESPAWN_MARGIN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN, PLAYER_MOVEMENT_SPEED,
+    PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
 use crate::{GameState, GameplayState, WinSize};
 
@@ -14,16 +15,24 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(InputManagerPlugin::<SpaceshipAction>::default())
             .add_system(spawn_spaceship.in_schedule(OnEnter(GameState::InGame)))
+            .add_system(
+                spaceship_dash
+                    .run_if(is_playing)
+                    .in_set(MovementSet::InitAction),
+            )
             .add_systems(
-                (
-                    spaceship_movement,
-                    apply_spaceship_velocity,
-                    spaceship_shoot,
-                    apply_velocity,
-                    out_of_bounds_despawn,
-                )
-                    .distributive_run_if(is_playing),
-            );
+                (spaceship_movement, apply_spaceship_dash_to_velocity)
+                    .distributive_run_if(is_playing)
+                    .in_set(MovementSet::UpdateVelocity)
+                    .after(MovementSet::InitAction),
+            )
+            .add_systems(
+                (apply_spaceship_velocity, apply_velocity)
+                    .distributive_run_if(is_playing)
+                    .in_set(MovementSet::ApplyVelocity)
+                    .after(MovementSet::UpdateVelocity),
+            )
+            .add_systems((spaceship_shoot, out_of_bounds_despawn).distributive_run_if(is_playing));
     }
 }
 
@@ -43,6 +52,13 @@ pub enum SpaceshipAction {
     Dash,
     Shoot,
     ChargeShot,
+}
+
+#[derive(SystemSet, Clone, Hash, Debug, Eq, PartialEq)]
+pub enum MovementSet {
+    InitAction,
+    UpdateVelocity,
+    ApplyVelocity,
 }
 
 #[derive(Component, Debug)]
@@ -96,6 +112,73 @@ struct ProjectileBundle {
     sprite: SpriteBundle,
 }
 
+#[derive(Debug)]
+enum Direction {
+    Right,
+    Left,
+}
+
+struct Point {
+    x: f32,
+    y: f32
+}
+
+#[derive(Component, Debug)]
+pub struct SpaceshipDash {
+    direction: Direction,
+    timer: Timer,
+}
+
+impl SpaceshipDash {
+    fn new(direction: Direction) -> Self {
+        SpaceshipDash {
+            direction,
+            timer: Timer::from_seconds(PLAYER_DASH_TIME_LEN, TimerMode::Once),
+        }
+    }
+
+    fn calc_boost(&mut self, time: &Res<Time>) -> Option<f32> {
+        self.timer.tick(time.delta());
+
+        if !self.timer.finished() {
+            let elapsed_secs: f32 = self.timer.elapsed_secs();
+
+            let boost = {
+                let speed = PLAYER_DASH_SPEED;
+                let dash_time = PLAYER_DASH_TIME_LEN;
+                let half_dash_time = dash_time / 2.0;
+
+                let parabola_max = -speed * half_dash_time.powi(2) + speed * dash_time * half_dash_time;
+
+                if elapsed_secs < half_dash_time {
+                    // parabola: -A*x^2 + B*x
+                    // A & B - constants
+                    // x - time
+                    -speed * elapsed_secs.powi(2) + speed * dash_time * elapsed_secs
+                } else {
+                    let p1 = Point {x: half_dash_time, y: parabola_max};
+                    let p2 = Point {x: dash_time, y: -parabola_max / 2.0};
+
+                    let slope = (p2.y - p1.y) / (p2.x - p1.x);
+                    let interception = p1.y - slope * p1.x;
+
+                    // linear function: C*x + D
+                    // C & D - constants
+                    // x - time
+                    slope * elapsed_secs + interception
+                }
+            };
+
+            match self.direction {
+                Direction::Right => Some(boost),
+                Direction::Left => Some(-boost),
+            }
+        } else {
+            None
+        }
+    }
+}
+
 // ===
 
 fn spawn_spaceship(mut commands: Commands) {
@@ -132,6 +215,49 @@ fn spaceship_movement(
     }
 }
 
+fn spaceship_dash(
+    mut commands: Commands,
+    player_query: Query<(Entity, &ActionState<SpaceshipAction>), With<Spaceship>>,
+) {
+    let (entity, action_state) = player_query.single();
+
+    if action_state.just_pressed(SpaceshipAction::Dash) {
+        let direction = {
+            if action_state.pressed(SpaceshipAction::MoveRight) {
+                Some(Direction::Right)
+            } else if action_state.pressed(SpaceshipAction::MoveLeft) {
+                Some(Direction::Left)
+            } else {
+                None
+            }
+        };
+
+        match direction {
+            Some(direction) => {
+                commands.entity(entity).insert(SpaceshipDash::new(direction));
+            }
+            None => {}
+        }
+    }
+}
+
+fn apply_spaceship_dash_to_velocity(
+    mut commands: Commands,
+    mut player_query: Query<(Entity, &mut Velocity, &mut SpaceshipDash), With<Spaceship>>,
+    time: Res<Time>,
+) {
+    for (entity, mut velocity, mut spaceship_dash) in player_query.iter_mut() {
+        match spaceship_dash.calc_boost(&time) {
+            Some(velocity_boost) => {
+                velocity.x += velocity_boost;
+            }
+            None => {
+                commands.entity(entity).remove::<SpaceshipDash>();
+            }
+        }
+    }
+}
+
 fn apply_spaceship_velocity(
     mut player_query: Query<(&mut Transform, &Velocity), With<Spaceship>>,
     time: Res<Time>,
@@ -150,7 +276,10 @@ fn apply_spaceship_velocity(
     transform.translation.x += velocity.x * time.delta_seconds();
 }
 
-fn apply_velocity(mut query: Query<(&mut Transform, &Velocity), Without<Spaceship>>, time: Res<Time>) {
+fn apply_velocity(
+    mut query: Query<(&mut Transform, &Velocity), Without<Spaceship>>,
+    time: Res<Time>,
+) {
     for (mut transform, velocity) in query.iter_mut() {
         transform.translation.x += velocity.x * time.delta_seconds();
         transform.translation.y += velocity.y * time.delta_seconds();

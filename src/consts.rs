@@ -1,5 +1,3 @@
-#![cfg_attr(debug_assertions, allow(dead_code, unused_imports))]
-
 // --- Gameplay screen ---
 
 pub const RATIO: f32 = 9.0 / 10.0;
@@ -10,8 +8,11 @@ pub const DESPAWN_MARGIN: f32 = 200.0;
 
 // --- Player ---
 
-pub const PLAYER_MOVEMENT_SPEED: f32 = 10.;
+pub const PLAYER_MOVEMENT_SPEED: f32 = 5.;
 pub const PLAYER_PROJECTILE_SPEED: f32 = 500.;
+
+pub const PLAYER_DASH_SPEED: f32 = 120.0;
+pub const PLAYER_DASH_TIME_LEN: f32 = 0.5;
 
 pub const PLAYER_Z: f32 = 10.0;
 pub const PLAYER_PROJECTILE_Z: f32 = 0.0;
