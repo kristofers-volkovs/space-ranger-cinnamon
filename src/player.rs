@@ -5,9 +5,9 @@ use leafwing_input_manager::prelude::*;
 
 use crate::consts::{
     DESPAWN_MARGIN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN, PLAYER_MOVEMENT_SPEED,
-    PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
+    PLAYER_POSITION, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
-use crate::movement::{Direction, MovementSet, Velocity, Movable};
+use crate::movement::{Direction, Movable, MovementSet, Velocity};
 use crate::{GameState, GameplayState, WinSize};
 
 pub struct PlayerPlugin;
@@ -173,7 +173,7 @@ fn spawn_spaceship(mut commands: Commands) {
                 custom_size: Some(Vec2 { x: 50., y: 50. }),
                 ..default()
             },
-            transform: Transform::from_xyz(0., 0., PLAYER_Z),
+            transform: Transform::from_xyz(0., PLAYER_POSITION, PLAYER_Z),
             ..default()
         },
     });
