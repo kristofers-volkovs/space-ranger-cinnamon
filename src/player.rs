@@ -45,7 +45,8 @@ pub struct Spaceship;
 pub enum SpaceshipAction {
     MoveRight,
     MoveLeft,
-    Dash,
+    DashRight,
+    DashLeft,
     Shoot,
 }
 
@@ -54,7 +55,8 @@ impl SpaceshipBundle {
         InputMap::new([
             (KeyCode::A, SpaceshipAction::MoveLeft),
             (KeyCode::D, SpaceshipAction::MoveRight),
-            (KeyCode::LShift, SpaceshipAction::Dash),
+            (KeyCode::E, SpaceshipAction::DashRight),
+            (KeyCode::Q, SpaceshipAction::DashLeft),
             (KeyCode::Space, SpaceshipAction::Shoot),
         ])
     }
@@ -246,15 +248,11 @@ fn spaceship_movement(
 ) {
     let (action_state, mut velocity, mut spaceship_dash) = player_query.single_mut();
 
-    if spaceship_dash.state.is_idle() && action_state.just_pressed(SpaceshipAction::Dash) {
+    if spaceship_dash.state.is_idle() {
         let direction = {
-            if action_state.pressed(SpaceshipAction::MoveRight) {
+            if action_state.just_pressed(SpaceshipAction::DashRight) {
                 Some(Direction::Right)
-            } else if action_state.pressed(SpaceshipAction::MoveLeft) {
-                Some(Direction::Left)
-            } else if velocity.x > 0.0 {
-                Some(Direction::Right)
-            } else if velocity.x < 0.0 {
+            } else if action_state.just_pressed(SpaceshipAction::DashLeft) {
                 Some(Direction::Left)
             } else {
                 None
