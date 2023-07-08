@@ -8,6 +8,7 @@ use crate::consts::{
     PLAYER_FIRING_COOLDOWN, PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED,
     PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
+// use crate::enemy::EnemyCount;
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
 use crate::{is_playing, GameState, WinSize};
 
@@ -74,7 +75,7 @@ struct Point {
     y: f32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Debug)]
 pub struct Dash {
     direction: Direction,
     timer: Timer,
@@ -137,7 +138,7 @@ impl Dash {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Debug)]
 enum DashState {
     Idle,
     Dashing(Dash),
@@ -163,7 +164,7 @@ impl SpaceshipDash {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Debug)]
 enum ShootingState {
     Idle,
     Charging,
@@ -310,6 +311,7 @@ fn out_of_bounds_despawn(
     mut commands: Commands,
     win_size: Res<WinSize>,
     query: Query<(Entity, &Transform, &Movable)>,
+    // mut enemy_count: Option<ResMut<EnemyCount>>,
 ) {
     for (entity, transform, movable) in query.iter() {
         if movable.auto_despawn {
@@ -323,6 +325,11 @@ fn out_of_bounds_despawn(
                 || translation.x < -w_bound
             {
                 commands.entity(entity).despawn();
+
+                // if let Some(ref mut enemy_count) = enemy_count {
+                //     // Need to order system calls because this can panic
+                //     enemy_count.asteroids -= 1;
+                // }
             }
         }
     }
