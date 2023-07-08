@@ -6,6 +6,7 @@ use consts::{WINDOW_HEIGHT, WINDOW_WIDTH};
 
 mod camera;
 mod consts;
+mod movement;
 mod player;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
@@ -48,6 +49,7 @@ fn main() {
         )
         .add_plugin(camera::CameraPlugin)
         .add_plugin(player::PlayerPlugin)
+        .add_plugin(movement::MovementPlugin)
         .run();
 }
 
