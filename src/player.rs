@@ -5,7 +5,8 @@ use leafwing_input_manager::prelude::*;
 
 use crate::consts::{
     DESPAWN_MARGIN, PLAYER_DASH_COOLDOWN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN,
-    PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
+    PLAYER_FIRING_COOLDOWN, PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED,
+    PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
 use crate::{GameState, GameplayState, WinSize};
@@ -46,7 +47,6 @@ pub enum SpaceshipAction {
     MoveLeft,
     Dash,
     Shoot,
-    ChargeShot,
 }
 
 impl SpaceshipBundle {
@@ -56,7 +56,6 @@ impl SpaceshipBundle {
             (KeyCode::D, SpaceshipAction::MoveRight),
             (KeyCode::LShift, SpaceshipAction::Dash),
             (KeyCode::Space, SpaceshipAction::Shoot),
-            (KeyCode::Space, SpaceshipAction::ChargeShot),
         ])
     }
 }
@@ -148,6 +147,12 @@ enum DashState {
     Cooldown(Timer),
 }
 
+impl DashState {
+    fn is_idle(&self) -> bool {
+        matches!(self, DashState::Idle)
+    }
+}
+
 #[derive(Component, Debug)]
 pub struct SpaceshipDash {
     state: DashState,
@@ -161,11 +166,43 @@ impl SpaceshipDash {
     }
 }
 
+#[derive(Component, Debug)]
+enum ShootingState {
+    Idle,
+    Charging,
+    Shooting,
+    Cooldown(Timer),
+}
+
+impl ShootingState {
+    fn is_idle(&self) -> bool {
+        matches!(self, ShootingState::Idle)
+    }
+
+    fn is_charging(&self) -> bool {
+        matches!(self, ShootingState::Charging)
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct SpaceshipShoot {
+    state: ShootingState,
+}
+
+impl SpaceshipShoot {
+    fn new() -> Self {
+        Self {
+            state: ShootingState::Idle,
+        }
+    }
+}
+
 #[derive(Bundle)]
 struct SpaceshipBundle {
     spaceship: Spaceship,
     velocity: Velocity,
     dash: SpaceshipDash,
+    shooting: SpaceshipShoot,
     #[bundle]
     input_manager: InputManagerBundle<SpaceshipAction>,
     #[bundle]
@@ -179,6 +216,7 @@ fn spawn_spaceship(mut commands: Commands) {
         spaceship: Spaceship,
         velocity: Velocity::new(),
         dash: SpaceshipDash::new(),
+        shooting: SpaceshipShoot::new(),
         input_manager: InputManagerBundle {
             input_map: SpaceshipBundle::default_input_map(),
             ..default()
@@ -208,7 +246,7 @@ fn spaceship_movement(
 ) {
     let (action_state, mut velocity, mut spaceship_dash) = player_query.single_mut();
 
-    if action_state.just_pressed(SpaceshipAction::Dash) {
+    if spaceship_dash.state.is_idle() && action_state.just_pressed(SpaceshipAction::Dash) {
         let direction = {
             if action_state.pressed(SpaceshipAction::MoveRight) {
                 Some(Direction::Right)
@@ -299,31 +337,62 @@ fn out_of_bounds_despawn(
 
 fn spaceship_shoot(
     mut commands: Commands,
-    player_query: Query<(&ActionState<SpaceshipAction>, &Transform), With<Spaceship>>,
+    mut player_query: Query<
+        (
+            &ActionState<SpaceshipAction>,
+            &Transform,
+            &mut SpaceshipShoot,
+        ),
+        With<Spaceship>,
+    >,
+    time: Res<Time>,
 ) {
-    if let Ok((action_state, transform)) = player_query.get_single() {
-        if action_state.just_pressed(SpaceshipAction::Shoot) {
-            commands.spawn(ProjectileBundle {
-                projectile: Projectile,
-                velocity: Velocity {
-                    x: 0.,
-                    y: PLAYER_PROJECTILE_SPEED,
-                },
-                movable: Movable { auto_despawn: true },
-                sprite: SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgb(1., 0.5, 1.),
-                        custom_size: Some(Vec2 { x: 10., y: 20. }),
+    if let Ok((action_state, transform, mut spaceship_shoot)) = player_query.get_single_mut() {
+        if spaceship_shoot.state.is_idle() && action_state.just_pressed(SpaceshipAction::Shoot) {
+            spaceship_shoot.state = ShootingState::Charging;
+        }
+
+        if spaceship_shoot.state.is_charging() && action_state.just_released(SpaceshipAction::Shoot)
+        {
+            spaceship_shoot.state = ShootingState::Shooting;
+        }
+
+        match &mut spaceship_shoot.state {
+            ShootingState::Idle => (),
+            ShootingState::Charging => (),
+            ShootingState::Shooting => {
+                commands.spawn(ProjectileBundle {
+                    projectile: Projectile,
+                    velocity: Velocity {
+                        x: 0.,
+                        y: PLAYER_PROJECTILE_SPEED,
+                    },
+                    movable: Movable { auto_despawn: true },
+                    sprite: SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::rgb(1.0, 1.0, 0.0),
+                            custom_size: Some(Vec2 { x: 15.0, y: 15.0 }),
+                            ..default()
+                        },
+                        transform: Transform::from_translation(
+                            transform.translation * Vec2::ONE.extend(PLAYER_PROJECTILE_Z),
+                        ),
                         ..default()
                     },
-                    transform: Transform::from_translation(
-                        transform.translation * Vec2::ONE.extend(PLAYER_PROJECTILE_Z),
-                    ),
-                    ..default()
-                },
-            });
+                });
 
-            // commands.entity(entity).insert(SpaceshipFiringCooldown::new());
+                spaceship_shoot.state = ShootingState::Cooldown(Timer::from_seconds(
+                    PLAYER_FIRING_COOLDOWN,
+                    TimerMode::Once,
+                ));
+            }
+            ShootingState::Cooldown(ref mut timer) => {
+                timer.tick(time.delta());
+
+                if timer.finished() {
+                    spaceship_shoot.state = ShootingState::Idle;
+                }
+            }
         }
     }
 }
