@@ -1,6 +1,7 @@
 use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide, utils::HashSet};
 
 use crate::{
+    enemy::EnemyCount,
     is_playing,
     player::{Projectile, ProjectileSource},
 };
@@ -9,7 +10,17 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(hit_detection.run_if(is_playing));
+        app.add_event::<DespawnEntity>()
+            .add_system(
+                hit_detection
+                    .run_if(is_playing)
+                    .in_set(EventSet::SpawnEvents),
+            )
+            .add_system(
+                event_handler_despawn_entity
+                    .in_set(EventSet::HandleEvents)
+                    .after(EventSet::SpawnEvents),
+            );
     }
 }
 
@@ -22,15 +33,43 @@ pub enum EntityType {
     Asteroid,
 }
 
+pub struct DespawnEntity {
+    pub entity: Entity,
+    pub entity_type: EntityType,
+}
+
+#[derive(SystemSet, Clone, Hash, Debug, Eq, PartialEq)]
+pub enum EventSet {
+    SpawnEvents,
+    HandleEvents,
+}
+
 // ===
 
-fn hit_detection(
+fn event_handler_despawn_entity(
     mut commands: Commands,
+    mut despawn_events: EventReader<DespawnEntity>,
+    mut enemy_count: ResMut<EnemyCount>,
+) {
+    for despawn_ev in despawn_events.iter() {
+        commands.entity(despawn_ev.entity).despawn();
+
+        if matches!(despawn_ev.entity_type, EntityType::Asteroid) {
+            enemy_count.asteroids -= 1;
+        }
+    }
+}
+
+fn hit_detection(
+    mut ev_despawn: EventWriter<DespawnEntity>,
     entity_query: Query<
         (Entity, &Transform, &Sprite, &EntityType),
         (With<EntityType>, Without<Projectile>),
     >,
-    projectile_query: Query<(Entity, &Transform, &Sprite, &ProjectileSource), With<Projectile>>,
+    projectile_query: Query<
+        (Entity, &Transform, &Sprite, &ProjectileSource, &EntityType),
+        With<Projectile>,
+    >,
 ) {
     let mut processed_entities: HashSet<Entity> = HashSet::new();
 
@@ -39,7 +78,7 @@ fn hit_detection(
             continue;
         }
 
-        for (projectile, projectile_tf, projectile_sprite, projectile_source) in
+        for (projectile, projectile_tf, projectile_sprite, projectile_source, projectile_type) in
             projectile_query.iter()
         {
             if matches!(entity_type, EntityType::Spaceship)
@@ -76,11 +115,17 @@ fn hit_detection(
             );
 
             if collision.is_some() {
-                commands.entity(projectile).despawn();
-                processed_entities.insert(projectile);
-
-                commands.entity(entity).despawn();
                 processed_entities.insert(entity);
+                ev_despawn.send(DespawnEntity {
+                    entity,
+                    entity_type: *entity_type,
+                });
+
+                processed_entities.insert(projectile);
+                ev_despawn.send(DespawnEntity {
+                    entity: projectile,
+                    entity_type: *projectile_type,
+                });
             }
         }
     }

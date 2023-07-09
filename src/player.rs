@@ -3,13 +3,12 @@
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
-use crate::common::EntityType;
+use crate::common::{DespawnEntity, EntityType, EventSet};
 use crate::consts::{
     DESPAWN_MARGIN, PLAYER_DASH_COOLDOWN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN,
     PLAYER_FIRING_COOLDOWN, PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED,
     PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
-use crate::enemy::EnemyCount;
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
 use crate::{is_playing, GameState, WinSize};
 
@@ -22,14 +21,21 @@ impl Plugin for PlayerPlugin {
             .add_system(
                 spaceship_movement
                     .run_if(is_playing)
-                    .in_set(MovementSet::UpdateVelocity),
+                    .in_set(MovementSet::UpdateVelocity)
+                    .after(EventSet::HandleEvents),
             )
             .add_system(
                 apply_spaceship_velocity
                     .run_if(is_playing)
+                    .in_set(MovementSet::ApplyVelocity)
                     .after(MovementSet::UpdateVelocity),
             )
-            .add_systems((spaceship_shoot, out_of_bounds_despawn).distributive_run_if(is_playing));
+            .add_system(
+                out_of_bounds_detection
+                    .run_if(is_playing)
+                    .in_set(EventSet::SpawnEvents),
+            )
+            .add_system(spaceship_shoot.run_if(is_playing));
     }
 }
 
@@ -318,30 +324,26 @@ fn apply_spaceship_velocity(
     tf.translation.x += velocity.x * time.delta_seconds();
 }
 
-fn out_of_bounds_despawn(
-    mut commands: Commands,
+fn out_of_bounds_detection(
+    mut ev_despawn: EventWriter<DespawnEntity>,
     win_size: Res<WinSize>,
     query: Query<(Entity, &Transform, &Movable, &EntityType)>,
-    mut enemy_count: Option<ResMut<EnemyCount>>,
 ) {
     for (entity, tf, movable, entity_type) in query.iter() {
         if movable.auto_despawn {
             let translation = tf.translation;
-            let h_bound = win_size.h / 2. + DESPAWN_MARGIN;
-            let w_bound = win_size.w / 2. + DESPAWN_MARGIN;
+            let h_bound = win_size.h / 2.0 + DESPAWN_MARGIN;
+            let w_bound = win_size.w / 2.0 + DESPAWN_MARGIN;
 
             if translation.y > h_bound
                 || translation.y < -h_bound
                 || translation.x > w_bound
                 || translation.x < -w_bound
             {
-                commands.entity(entity).despawn();
-
-                if matches!(entity_type, EntityType::Asteroid) {
-                    if let Some(ref mut enemy_count) = enemy_count {
-                        enemy_count.asteroids -= 1;
-                    }
-                }
+                ev_despawn.send(DespawnEntity {
+                    entity,
+                    entity_type: *entity_type,
+                });
             }
         }
     }
