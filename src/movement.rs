@@ -48,8 +48,8 @@ fn apply_velocity(
     mut query: Query<(&mut Transform, &Velocity), Without<Spaceship>>,
     time: Res<Time>,
 ) {
-    for (mut transform, velocity) in query.iter_mut() {
-        transform.translation.x += velocity.x * time.delta_seconds();
-        transform.translation.y += velocity.y * time.delta_seconds();
+    for (mut tf, velocity) in query.iter_mut() {
+        tf.translation.x += velocity.x * time.delta_seconds();
+        tf.translation.y += velocity.y * time.delta_seconds();
     }
 }

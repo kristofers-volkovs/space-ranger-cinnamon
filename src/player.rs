@@ -294,17 +294,17 @@ fn apply_spaceship_velocity(
     time: Res<Time>,
     win_size: Res<WinSize>,
 ) {
-    let (mut transform, velocity) = player_query.single_mut();
+    let (mut tf, velocity) = player_query.single_mut();
 
     let w_bound = win_size.w / 2.;
-    if (-w_bound > transform.translation.x && velocity.x < 0.)
-        || (w_bound < transform.translation.x && velocity.x > 0.)
+    if (-w_bound > tf.translation.x && velocity.x < 0.)
+        || (w_bound < tf.translation.x && velocity.x > 0.)
     {
         // TODO ships velocity should get back to 0 faster when on the border
         return;
     }
 
-    transform.translation.x += velocity.x * time.delta_seconds();
+    tf.translation.x += velocity.x * time.delta_seconds();
 }
 
 fn out_of_bounds_despawn(
@@ -313,9 +313,9 @@ fn out_of_bounds_despawn(
     query: Query<(Entity, &Transform, &Movable)>,
     mut enemy_count: Option<ResMut<EnemyCount>>,
 ) {
-    for (entity, transform, movable) in query.iter() {
+    for (entity, tf, movable) in query.iter() {
         if movable.auto_despawn {
-            let translation = transform.translation;
+            let translation = tf.translation;
             let h_bound = win_size.h / 2. + DESPAWN_MARGIN;
             let w_bound = win_size.w / 2. + DESPAWN_MARGIN;
 
@@ -346,7 +346,7 @@ fn spaceship_shoot(
     >,
     time: Res<Time>,
 ) {
-    if let Ok((action_state, transform, mut spaceship_shoot)) = player_query.get_single_mut() {
+    if let Ok((action_state, tf, mut spaceship_shoot)) = player_query.get_single_mut() {
         if spaceship_shoot.state.is_idle() && action_state.just_pressed(SpaceshipAction::Shoot) {
             spaceship_shoot.state = ShootingState::Charging;
         }
@@ -374,7 +374,7 @@ fn spaceship_shoot(
                             ..default()
                         },
                         transform: Transform::from_translation(
-                            transform.translation * Vec2::ONE.extend(PLAYER_PROJECTILE_Z),
+                            tf.translation * Vec2::ONE.extend(PLAYER_PROJECTILE_Z),
                         ),
                         ..default()
                     },
