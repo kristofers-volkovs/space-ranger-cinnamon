@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 
+use crate::common::EntityType;
 use crate::consts::{
     DESPAWN_MARGIN, PLAYER_DASH_COOLDOWN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN,
     PLAYER_FIRING_COOLDOWN, PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED,
@@ -61,11 +62,19 @@ impl SpaceshipBundle {
 #[derive(Component, Debug)]
 pub struct Projectile;
 
+#[derive(Component, Debug)]
+pub enum ProjectileSource {
+    FromSpaceship,
+    // FromEnemy,
+}
+
 #[derive(Bundle)]
 struct ProjectileBundle {
     projectile: Projectile,
+    entity_type: EntityType,
     velocity: Velocity,
     movable: Movable,
+    source: ProjectileSource,
     #[bundle]
     sprite: SpriteBundle,
 }
@@ -198,6 +207,7 @@ impl SpaceshipShoot {
 #[derive(Bundle)]
 struct SpaceshipBundle {
     spaceship: Spaceship,
+    entity_type: EntityType,
     velocity: Velocity,
     dash: SpaceshipDash,
     shooting: SpaceshipShoot,
@@ -212,6 +222,7 @@ struct SpaceshipBundle {
 fn spawn_spaceship(mut commands: Commands) {
     commands.spawn(SpaceshipBundle {
         spaceship: Spaceship,
+        entity_type: EntityType::Spaceship,
         velocity: Velocity::new(),
         dash: SpaceshipDash::new(),
         shooting: SpaceshipShoot::new(),
@@ -310,10 +321,10 @@ fn apply_spaceship_velocity(
 fn out_of_bounds_despawn(
     mut commands: Commands,
     win_size: Res<WinSize>,
-    query: Query<(Entity, &Transform, &Movable)>,
+    query: Query<(Entity, &Transform, &Movable, &EntityType)>,
     mut enemy_count: Option<ResMut<EnemyCount>>,
 ) {
-    for (entity, tf, movable) in query.iter() {
+    for (entity, tf, movable, entity_type) in query.iter() {
         if movable.auto_despawn {
             let translation = tf.translation;
             let h_bound = win_size.h / 2. + DESPAWN_MARGIN;
@@ -326,8 +337,10 @@ fn out_of_bounds_despawn(
             {
                 commands.entity(entity).despawn();
 
-                if let Some(ref mut enemy_count) = enemy_count {
-                    enemy_count.asteroids -= 1;
+                if matches!(entity_type, EntityType::Asteroid) {
+                    if let Some(ref mut enemy_count) = enemy_count {
+                        enemy_count.asteroids -= 1;
+                    }
                 }
             }
         }
@@ -362,11 +375,13 @@ fn spaceship_shoot(
             ShootingState::Shooting => {
                 commands.spawn(ProjectileBundle {
                     projectile: Projectile,
+                    entity_type: EntityType::Projectile,
                     velocity: Velocity {
                         x: 0.,
                         y: PLAYER_PROJECTILE_SPEED,
                     },
                     movable: Movable { auto_despawn: true },
+                    source: ProjectileSource::FromSpaceship,
                     sprite: SpriteBundle {
                         sprite: Sprite {
                             color: Color::rgb(1.0, 1.0, 0.0),

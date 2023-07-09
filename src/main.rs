@@ -5,6 +5,7 @@ use bevy::{
 use consts::{WINDOW_HEIGHT, WINDOW_WIDTH};
 
 mod camera;
+mod common;
 mod consts;
 mod enemy;
 mod movement;
@@ -56,6 +57,7 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .add_plugin(enemy::EnemyPlugin)
         .add_plugin(movement::MovementPlugin)
+        .add_plugin(common::CommonPlugin)
         .run();
 }
 

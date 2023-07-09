@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
+    common::EntityType,
     consts::{ENEMY_Z, SPAWN_MARGIN},
     movement::{Movable, Velocity},
     WinSize,
@@ -30,11 +31,6 @@ pub struct EnemyCount {
     pub asteroids: u32,
 }
 
-#[derive(Component, Clone, Copy, Debug)]
-enum EnemyType {
-    Asteroid,
-}
-
 enum EnemySpawnLocation {
     Top,
     // Sides,
@@ -42,14 +38,14 @@ enum EnemySpawnLocation {
 
 #[derive(Resource)]
 struct EnemySpawner {
-    enemy_type: EnemyType,
+    entity_type: EntityType,
     location: EnemySpawnLocation,
 }
 
 impl Default for EnemySpawner {
     fn default() -> Self {
         Self {
-            enemy_type: EnemyType::Asteroid,
+            entity_type: EntityType::Asteroid,
             location: EnemySpawnLocation::Top,
         }
     }
@@ -81,7 +77,7 @@ impl EnemySpawner {
 #[derive(Bundle)]
 struct EnemyBundle {
     enemy: Enemy,
-    enemy_type: EnemyType,
+    entity_type: EntityType,
     movable: Movable,
     velocity: Velocity,
     #[bundle]
@@ -100,7 +96,7 @@ fn spawn_enemy(
 
     commands.spawn(EnemyBundle {
         enemy: Enemy,
-        enemy_type: enemy_spawner.enemy_type,
+        entity_type: enemy_spawner.entity_type,
         movable: Movable { auto_despawn: true },
         velocity: Velocity { x: 0.0, y: -200.0 },
         sprite: SpriteBundle {
