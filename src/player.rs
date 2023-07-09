@@ -259,48 +259,50 @@ fn spaceship_movement(
     >,
     time: Res<Time>,
 ) {
-    let (action_state, mut velocity, mut spaceship_dash) = player_query.single_mut();
+    if let Ok((action_state, mut velocity, mut spaceship_dash)) = player_query.get_single_mut() {
+        if spaceship_dash.state.is_idle() {
+            let direction = {
+                if action_state.just_pressed(SpaceshipAction::DashRight) {
+                    Some(Direction::Right)
+                } else if action_state.just_pressed(SpaceshipAction::DashLeft) {
+                    Some(Direction::Left)
+                } else {
+                    None
+                }
+            };
 
-    if spaceship_dash.state.is_idle() {
-        let direction = {
-            if action_state.just_pressed(SpaceshipAction::DashRight) {
-                Some(Direction::Right)
-            } else if action_state.just_pressed(SpaceshipAction::DashLeft) {
-                Some(Direction::Left)
-            } else {
-                None
-            }
-        };
-
-        if let Some(d) = direction {
-            spaceship_dash.state = DashState::Dashing(Dash::new(d));
-        }
-    }
-
-    match &mut spaceship_dash.state {
-        DashState::Idle => {
-            if action_state.pressed(SpaceshipAction::MoveRight) {
-                velocity.x += PLAYER_MOVEMENT_SPEED;
-            }
-
-            if action_state.pressed(SpaceshipAction::MoveLeft) {
-                velocity.x -= PLAYER_MOVEMENT_SPEED;
+            if let Some(d) = direction {
+                spaceship_dash.state = DashState::Dashing(Dash::new(d));
             }
         }
-        DashState::Dashing(ref mut dash) => match dash.calc_boost(&time) {
-            Some(velocity_boost) => {
-                velocity.x += velocity_boost;
-            }
-            None => {
-                spaceship_dash.state =
-                    DashState::Cooldown(Timer::from_seconds(PLAYER_DASH_COOLDOWN, TimerMode::Once));
-            }
-        },
-        DashState::Cooldown(ref mut timer) => {
-            timer.tick(time.delta());
 
-            if timer.finished() {
-                spaceship_dash.state = DashState::Idle;
+        match &mut spaceship_dash.state {
+            DashState::Idle => {
+                if action_state.pressed(SpaceshipAction::MoveRight) {
+                    velocity.x += PLAYER_MOVEMENT_SPEED;
+                }
+
+                if action_state.pressed(SpaceshipAction::MoveLeft) {
+                    velocity.x -= PLAYER_MOVEMENT_SPEED;
+                }
+            }
+            DashState::Dashing(ref mut dash) => match dash.calc_boost(&time) {
+                Some(velocity_boost) => {
+                    velocity.x += velocity_boost;
+                }
+                None => {
+                    spaceship_dash.state = DashState::Cooldown(Timer::from_seconds(
+                        PLAYER_DASH_COOLDOWN,
+                        TimerMode::Once,
+                    ));
+                }
+            },
+            DashState::Cooldown(ref mut timer) => {
+                timer.tick(time.delta());
+
+                if timer.finished() {
+                    spaceship_dash.state = DashState::Idle;
+                }
             }
         }
     }
@@ -311,17 +313,17 @@ fn apply_spaceship_velocity(
     time: Res<Time>,
     win_size: Res<WinSize>,
 ) {
-    let (mut tf, velocity) = player_query.single_mut();
+    if let Ok((mut tf, velocity)) = player_query.get_single_mut() {
+        let w_bound = win_size.w / 2.;
+        if (-w_bound > tf.translation.x && velocity.x < 0.)
+            || (w_bound < tf.translation.x && velocity.x > 0.)
+        {
+            // TODO ships velocity should get back to 0 faster when on the border
+            return;
+        }
 
-    let w_bound = win_size.w / 2.;
-    if (-w_bound > tf.translation.x && velocity.x < 0.)
-        || (w_bound < tf.translation.x && velocity.x > 0.)
-    {
-        // TODO ships velocity should get back to 0 faster when on the border
-        return;
+        tf.translation.x += velocity.x * time.delta_seconds();
     }
-
-    tf.translation.x += velocity.x * time.delta_seconds();
 }
 
 fn out_of_bounds_detection(

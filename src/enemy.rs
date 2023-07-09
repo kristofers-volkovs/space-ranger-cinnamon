@@ -1,12 +1,14 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 
 use crate::{
-    common::EntityType,
+    common::{DespawnEntity, EntityType, EventSet},
     consts::{ENEMY_Z, SPAWN_MARGIN},
+    is_playing,
     movement::{Movable, Velocity},
+    player::Spaceship,
     WinSize,
 };
 
@@ -17,7 +19,16 @@ impl Plugin for EnemyPlugin {
         app.init_resource::<EnemyCount>()
             .init_resource::<EnemySpawner>()
             .insert_resource(FixedTime::new(Duration::from_secs(2)))
-            .add_system(spawn_enemy.in_schedule(CoreSchedule::FixedUpdate));
+            .add_system(
+                spawn_enemy
+                    .in_schedule(CoreSchedule::FixedUpdate)
+                    .run_if(is_playing),
+            )
+            .add_system(
+                enemy_collision_detection
+                    .run_if(is_playing)
+                    .in_set(EventSet::SpawnEvents),
+            );
     }
 }
 
@@ -111,4 +122,45 @@ fn spawn_enemy(
     });
 
     enemy_count.asteroids += 1;
+}
+
+fn enemy_collision_detection(
+    mut ev_despawn: EventWriter<DespawnEntity>,
+    enemy_query: Query<(Entity, &Transform, &Sprite, &EntityType), With<Enemy>>,
+    spaceship_query: Query<(Entity, &Transform, &Sprite), With<Spaceship>>,
+) {
+    if let Ok((spaceship_entity, spaceship_tf, spaceship_sprite)) = spaceship_query.get_single() {
+        for (enemy_entity, enemy_tf, enemy_sprite, enemy_type) in enemy_query.iter() {
+            let spaceship_size = {
+                match spaceship_sprite.custom_size {
+                    Some(size) => size * spaceship_tf.scale.xy(),
+                    None => panic!("Spaceship sprite has no custom size"),
+                }
+            };
+            let enemy_size = {
+                match enemy_sprite.custom_size {
+                    Some(size) => size * enemy_tf.scale.xy(),
+                    None => panic!("Enemy sprite has no custom size"),
+                }
+            };
+
+            let collision = collide(
+                spaceship_tf.translation,
+                spaceship_size,
+                enemy_tf.translation,
+                enemy_size,
+            );
+
+            if collision.is_some() {
+                ev_despawn.send(DespawnEntity {
+                    entity: spaceship_entity,
+                    entity_type: EntityType::Spaceship,
+                });
+                ev_despawn.send(DespawnEntity {
+                    entity: enemy_entity,
+                    entity_type: *enemy_type,
+                });
+            }
+        }
+    }
 }

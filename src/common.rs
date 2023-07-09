@@ -12,7 +12,7 @@ impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<DespawnEntity>()
             .add_system(
-                hit_detection
+                projectile_hit_detection
                     .run_if(is_playing)
                     .in_set(EventSet::SpawnEvents),
             )
@@ -60,7 +60,7 @@ fn event_handler_despawn_entity(
     }
 }
 
-fn hit_detection(
+fn projectile_hit_detection(
     mut ev_despawn: EventWriter<DespawnEntity>,
     entity_query: Query<
         (Entity, &Transform, &Sprite, &EntityType),
@@ -91,27 +91,24 @@ fn hit_detection(
                 continue;
             }
 
-            let entity_scale = entity_tf.scale.xy();
-            let projectile_scale = projectile_tf.scale.xy();
-
             let projectile_size = {
                 match projectile_sprite.custom_size {
-                    Some(size) => size,
+                    Some(size) => size * entity_tf.scale.xy(),
                     None => panic!("Projectile sprite has no custom size"),
                 }
             };
             let entity_size = {
                 match entity_sprite.custom_size {
-                    Some(size) => size,
+                    Some(size) => size * projectile_tf.scale.xy(),
                     None => panic!("Entity sprite has no custom size"),
                 }
             };
 
             let collision = collide(
                 projectile_tf.translation,
-                projectile_size * projectile_scale,
+                projectile_size,
                 entity_tf.translation,
-                entity_size * entity_scale,
+                entity_size,
             );
 
             if collision.is_some() {
