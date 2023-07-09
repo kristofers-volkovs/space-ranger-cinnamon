@@ -17,7 +17,7 @@ impl Plugin for CommonPlugin {
                     .in_set(EventSet::SpawnEvents),
             )
             .add_system(
-                event_handler_despawn_entity
+                despawn_entity_handler
                     .in_set(EventSet::HandleEvents)
                     .after(EventSet::SpawnEvents),
             );
@@ -46,7 +46,7 @@ pub enum EventSet {
 
 // ===
 
-fn event_handler_despawn_entity(
+fn despawn_entity_handler(
     mut commands: Commands,
     mut despawn_events: EventReader<DespawnEntity>,
     mut enemy_count: ResMut<EnemyCount>,

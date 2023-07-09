@@ -17,7 +17,7 @@ pub const PLAYER_DASH_SPEED: f32 = 300.0;
 
 pub const PLAYER_DASH_TIME_LEN: f32 = 0.5;
 
-pub const PLAYER_FIRING_COOLDOWN: f32 = 0.2;
+pub const PLAYER_FIRING_COOLDOWN: f32 = 0.15;
 pub const PLAYER_DASH_COOLDOWN: f32 = 0.5;
 
 pub const PLAYER_Z: f32 = 10.0;

@@ -16,7 +16,8 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(InputManagerPlugin::<SpaceshipAction>::default())
+        app.add_event::<SpaceshipIsHit>()
+            .add_plugin(InputManagerPlugin::<SpaceshipAction>::default())
             .add_system(spawn_spaceship.in_schedule(OnEnter(GameState::InGame)))
             .add_system(
                 spaceship_movement
@@ -34,6 +35,12 @@ impl Plugin for PlayerPlugin {
                 out_of_bounds_detection
                     .run_if(is_playing)
                     .in_set(EventSet::SpawnEvents),
+            )
+            .add_system(
+                spaceship_hit_handler
+                    .run_if(is_playing)
+                    .in_set(EventSet::HandleEvents)
+                    .after(EventSet::SpawnEvents),
             )
             .add_system(spaceship_shoot.run_if(is_playing));
     }
@@ -210,6 +217,25 @@ impl SpaceshipShoot {
     }
 }
 
+#[derive(Component, Debug)]
+pub struct SpaceshipHealth {
+    pub max_health: u32,
+    pub health: u32,
+}
+
+impl SpaceshipHealth {
+    pub fn new(max_health: u32) -> Self {
+        Self {
+            max_health,
+            health: max_health,
+        }
+    }
+}
+
+pub struct SpaceshipIsHit {
+    pub entity: Entity,
+}
+
 #[derive(Bundle)]
 struct SpaceshipBundle {
     spaceship: Spaceship,
@@ -217,6 +243,7 @@ struct SpaceshipBundle {
     velocity: Velocity,
     dash: SpaceshipDash,
     shooting: SpaceshipShoot,
+    health: SpaceshipHealth,
     #[bundle]
     input_manager: InputManagerBundle<SpaceshipAction>,
     #[bundle]
@@ -232,6 +259,7 @@ fn spawn_spaceship(mut commands: Commands) {
         velocity: Velocity::new(),
         dash: SpaceshipDash::new(),
         shooting: SpaceshipShoot::new(),
+        health: SpaceshipHealth::new(3),
         input_manager: InputManagerBundle {
             input_map: SpaceshipBundle::default_input_map(),
             ..default()
@@ -409,6 +437,29 @@ fn spaceship_shoot(
 
                 if timer.finished() {
                     spaceship_shoot.state = ShootingState::Idle;
+                }
+            }
+        }
+    }
+}
+
+fn spaceship_hit_handler(
+    mut hit_event: EventReader<SpaceshipIsHit>,
+    mut ev_despawn: EventWriter<DespawnEntity>,
+    mut query: Query<&mut SpaceshipHealth>,
+) {
+    if let Ok(mut spaceship_health) = query.get_single_mut() {
+        if let Some(hit_ev) = hit_event.iter().next() {
+            if spaceship_health.health > 0 {
+                spaceship_health.health -= 1;
+
+                if spaceship_health.health == 0 {
+                    ev_despawn.send(DespawnEntity {
+                        entity: hit_ev.entity,
+                        entity_type: EntityType::Spaceship,
+                    });
+                } else {
+                    println!("Spaceship goes invincible");
                 }
             }
         }
