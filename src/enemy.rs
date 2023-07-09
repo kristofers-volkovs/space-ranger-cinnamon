@@ -115,6 +115,4 @@ fn spawn_enemy(
     });
 
     enemy_count.asteroids += 1;
-
-    println!("{:?}", enemy_count);
 }
