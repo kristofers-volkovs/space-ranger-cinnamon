@@ -3,7 +3,7 @@ use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide, utils:
 use crate::{
     enemy::EnemyCount,
     is_playing,
-    player::{Projectile, ProjectileSource},
+    player::{Invulnerability, Projectile, ProjectileSource},
 };
 
 pub struct CommonPlugin;
@@ -14,12 +14,12 @@ impl Plugin for CommonPlugin {
             .add_system(
                 projectile_hit_detection
                     .run_if(is_playing)
-                    .in_set(EventSet::SpawnEvents),
+                    .in_set(EventSet::Spawn),
             )
             .add_system(
-                despawn_entity_handler
-                    .in_set(EventSet::HandleEvents)
-                    .after(EventSet::SpawnEvents),
+                despawn_entities_handler
+                    .in_set(EventSet::HandleDespawn)
+                    .after(EventSet::HandleHit),
             );
     }
 }
@@ -40,13 +40,14 @@ pub struct DespawnEntity {
 
 #[derive(SystemSet, Clone, Hash, Debug, Eq, PartialEq)]
 pub enum EventSet {
-    SpawnEvents,
-    HandleEvents,
+    Spawn,
+    HandleHit,
+    HandleDespawn,
 }
 
 // ===
 
-fn despawn_entity_handler(
+fn despawn_entities_handler(
     mut commands: Commands,
     mut despawn_events: EventReader<DespawnEntity>,
     mut enemy_count: ResMut<EnemyCount>,
@@ -64,7 +65,11 @@ fn projectile_hit_detection(
     mut ev_despawn: EventWriter<DespawnEntity>,
     entity_query: Query<
         (Entity, &Transform, &Sprite, &EntityType),
-        (With<EntityType>, Without<Projectile>),
+        (
+            With<EntityType>,
+            Without<Projectile>,
+            Without<Invulnerability>,
+        ),
     >,
     projectile_query: Query<
         (Entity, &Transform, &Sprite, &ProjectileSource, &EntityType),

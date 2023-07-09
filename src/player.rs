@@ -6,8 +6,8 @@ use leafwing_input_manager::prelude::*;
 use crate::common::{DespawnEntity, EntityType, EventSet};
 use crate::consts::{
     DESPAWN_MARGIN, PLAYER_DASH_COOLDOWN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN,
-    PLAYER_FIRING_COOLDOWN, PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED,
-    PLAYER_PROJECTILE_Z, PLAYER_Z,
+    PLAYER_FIRING_COOLDOWN, PLAYER_INVULNERABILITY_ANIMATION_TIME, PLAYER_INVULNERABILITY_TIME,
+    PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
 };
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
 use crate::{is_playing, GameState, WinSize};
@@ -23,7 +23,7 @@ impl Plugin for PlayerPlugin {
                 spaceship_movement
                     .run_if(is_playing)
                     .in_set(MovementSet::UpdateVelocity)
-                    .after(EventSet::HandleEvents),
+                    .after(EventSet::HandleDespawn),
             )
             .add_system(
                 apply_spaceship_velocity
@@ -34,15 +34,17 @@ impl Plugin for PlayerPlugin {
             .add_system(
                 out_of_bounds_detection
                     .run_if(is_playing)
-                    .in_set(EventSet::SpawnEvents),
+                    .in_set(EventSet::Spawn),
             )
             .add_system(
                 spaceship_hit_handler
                     .run_if(is_playing)
-                    .in_set(EventSet::HandleEvents)
-                    .after(EventSet::SpawnEvents),
+                    .in_set(EventSet::HandleHit)
+                    .after(EventSet::Spawn),
             )
-            .add_system(spaceship_shoot.run_if(is_playing));
+            .add_systems(
+                (spaceship_shoot, spaceship_invincibility).distributive_run_if(is_playing),
+            );
     }
 }
 
@@ -234,6 +236,25 @@ impl SpaceshipHealth {
 
 pub struct SpaceshipIsHit {
     pub entity: Entity,
+}
+
+#[derive(Component, Debug)]
+#[component(storage = "SparseSet")]
+pub struct Invulnerability {
+    pub length: f32,
+    pub animation_timer: Timer,
+}
+
+impl Invulnerability {
+    pub fn new() -> Self {
+        Self {
+            length: PLAYER_INVULNERABILITY_TIME,
+            animation_timer: Timer::from_seconds(
+                PLAYER_INVULNERABILITY_ANIMATION_TIME,
+                TimerMode::Repeating,
+            ),
+        }
+    }
 }
 
 #[derive(Bundle)]
@@ -444,6 +465,7 @@ fn spaceship_shoot(
 }
 
 fn spaceship_hit_handler(
+    mut commands: Commands,
     mut hit_event: EventReader<SpaceshipIsHit>,
     mut ev_despawn: EventWriter<DespawnEntity>,
     mut query: Query<&mut SpaceshipHealth>,
@@ -459,9 +481,34 @@ fn spaceship_hit_handler(
                         entity_type: EntityType::Spaceship,
                     });
                 } else {
-                    println!("Spaceship goes invincible");
+                    commands
+                        .entity(hit_ev.entity)
+                        .insert(Invulnerability::new());
                 }
             }
+        }
+    }
+}
+
+fn spaceship_invincibility(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Invulnerability, &mut Sprite), With<Spaceship>>,
+) {
+    if let Ok((entity, mut invincibility, mut sprite)) = query.get_single_mut() {
+        invincibility.length -= time.delta_seconds();
+        invincibility.animation_timer.tick(time.delta());
+
+        if invincibility.animation_timer.finished() {
+            match sprite.color.a() {
+                a if a == 1.0 => sprite.color.set_a(0.3),
+                _ => sprite.color.set_a(1.0),
+            };
+        }
+
+        if invincibility.length <= 0.0 {
+            commands.entity(entity).remove::<Invulnerability>();
+            sprite.color.set_a(1.0);
         }
     }
 }

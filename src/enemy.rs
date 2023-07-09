@@ -8,7 +8,7 @@ use crate::{
     consts::{ENEMY_Z, SPAWN_MARGIN},
     is_playing,
     movement::{Movable, Velocity},
-    player::{Spaceship, SpaceshipIsHit},
+    player::{Invulnerability, Spaceship, SpaceshipIsHit},
     WinSize,
 };
 
@@ -27,7 +27,7 @@ impl Plugin for EnemyPlugin {
             .add_system(
                 enemy_collision_detection
                     .run_if(is_playing)
-                    .in_set(EventSet::SpawnEvents),
+                    .in_set(EventSet::Spawn),
             );
     }
 }
@@ -128,7 +128,10 @@ fn enemy_collision_detection(
     mut ev_despawn: EventWriter<DespawnEntity>,
     mut ev_spaceship_hit: EventWriter<SpaceshipIsHit>,
     enemy_query: Query<(Entity, &Transform, &Sprite, &EntityType), With<Enemy>>,
-    spaceship_query: Query<(Entity, &Transform, &Sprite), With<Spaceship>>,
+    spaceship_query: Query<
+        (Entity, &Transform, &Sprite),
+        (With<Spaceship>, Without<Invulnerability>),
+    >,
 ) {
     if let Ok((spaceship_entity, spaceship_tf, spaceship_sprite)) = spaceship_query.get_single() {
         for (enemy_entity, enemy_tf, enemy_sprite, enemy_type) in enemy_query.iter() {
