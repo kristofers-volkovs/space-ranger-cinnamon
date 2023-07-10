@@ -2,7 +2,7 @@ use bevy::{
     prelude::*,
     window::{PrimaryWindow, WindowResolution},
 };
-use consts::{WINDOW_HEIGHT, WINDOW_WIDTH};
+use consts::{PLAYER_MAX_HEALTH, WINDOW_HEIGHT, WINDOW_WIDTH};
 
 mod camera;
 mod common;
@@ -10,6 +10,7 @@ mod consts;
 mod enemy;
 mod movement;
 mod player;
+mod ui;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
 pub enum GameState {
@@ -34,11 +35,11 @@ fn main() {
     App::new()
         // --- Initial resources ---
         .insert_resource(ClearColor(Color::BLACK))
+        .add_startup_system(resource_setup)
+        .init_resource::<SpaceshipState>()
         // --- Initial game states ---
         .add_state::<GameState>()
         .add_state::<GameplayState>()
-        // --- Initialize games resources ---
-        .add_startup_system(resource_setup)
         // --- Install plugins ---
         .add_plugins(
             DefaultPlugins
@@ -58,6 +59,7 @@ fn main() {
         .add_plugin(enemy::EnemyPlugin)
         .add_plugin(movement::MovementPlugin)
         .add_plugin(common::CommonPlugin)
+        .add_plugin(ui::UiPlugin)
         .run();
 }
 
@@ -65,6 +67,19 @@ fn main() {
 pub struct WinSize {
     pub w: f32,
     pub h: f32,
+}
+
+#[derive(Resource, Debug)]
+pub struct SpaceshipState {
+    pub health: u32,
+}
+
+impl Default for SpaceshipState {
+    fn default() -> Self {
+        Self {
+            health: PLAYER_MAX_HEALTH,
+        }
+    }
 }
 
 fn resource_setup(mut commands: Commands, query: Query<&Window, With<PrimaryWindow>>) {

@@ -11,6 +11,8 @@ pub const DESPAWN_MARGIN: f32 = 200.0;
 
 pub const PLAYER_POSITION: f32 = -(WINDOW_HEIGHT / 2.0) * (4.0 / 5.0);
 
+pub const PLAYER_MAX_HEALTH: u32 = 3;
+
 pub const PLAYER_MOVEMENT_SPEED: f32 = 5.;
 pub const PLAYER_PROJECTILE_SPEED: f32 = 1000.;
 pub const PLAYER_DASH_SPEED: f32 = 300.0;
