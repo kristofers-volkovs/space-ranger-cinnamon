@@ -19,12 +19,9 @@ impl Plugin for EnemyPlugin {
         app.init_resource::<EnemyCount>()
             .init_resource::<EnemySpawner>()
             .insert_resource(FixedTime::new(Duration::from_secs(2)))
-            .add_system(
-                spawn_enemy
-                    .in_schedule(CoreSchedule::FixedUpdate)
-                    .run_if(is_playing),
-            )
-            .add_system(
+            .add_systems(FixedUpdate, spawn_enemy.run_if(is_playing))
+            .add_systems(
+                PreUpdate,
                 enemy_collision_detection
                     .run_if(is_playing)
                     .in_set(EventSet::Spawn),
@@ -91,7 +88,7 @@ struct EnemyBundle {
     entity_type: EntityType,
     movable: Movable,
     velocity: Velocity,
-    #[bundle]
+    #[bundle()]
     sprite: SpriteBundle,
 }
 

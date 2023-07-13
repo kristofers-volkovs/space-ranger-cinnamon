@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    window::{PrimaryWindow, WindowResolution},
-};
+use bevy::{prelude::*, window::WindowResolution};
 use consts::{PLAYER_MAX_HEALTH, WINDOW_HEIGHT, WINDOW_WIDTH};
 
 mod camera;
@@ -28,20 +25,20 @@ pub enum GameplayState {
 }
 
 pub fn is_playing(game: Res<State<GameState>>, gameplay: Res<State<GameplayState>>) -> bool {
-    matches!(game.0, GameState::InGame) && matches!(gameplay.0, GameplayState::Playing)
+    matches!(game.get(), GameState::InGame) && matches!(gameplay.get(), GameplayState::Playing)
 }
 
 fn main() {
     App::new()
         // --- Initial resources ---
         .insert_resource(ClearColor(Color::BLACK))
-        .add_startup_system(resource_setup)
         .init_resource::<SpaceshipState>()
+        .init_resource::<WinSize>()
         // --- Initial game states ---
         .add_state::<GameState>()
         .add_state::<GameplayState>()
         // --- Install plugins ---
-        .add_plugins(
+        .add_plugins((
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
@@ -53,13 +50,13 @@ fn main() {
                     }),
                     ..default()
                 }),
-        )
-        .add_plugin(camera::CameraPlugin)
-        .add_plugin(player::PlayerPlugin)
-        .add_plugin(enemy::EnemyPlugin)
-        .add_plugin(movement::MovementPlugin)
-        .add_plugin(common::CommonPlugin)
-        .add_plugin(ui::UiPlugin)
+            camera::CameraPlugin,
+            player::PlayerPlugin,
+            enemy::EnemyPlugin,
+            movement::MovementPlugin,
+            common::CommonPlugin,
+            ui::UiPlugin,
+        ))
         .run();
 }
 
@@ -67,6 +64,15 @@ fn main() {
 pub struct WinSize {
     pub w: f32,
     pub h: f32,
+}
+
+impl Default for WinSize {
+    fn default() -> Self {
+        Self {
+            w: WINDOW_WIDTH,
+            h: WINDOW_HEIGHT,
+        }
+    }
 }
 
 #[derive(Resource, Debug)]
@@ -80,14 +86,4 @@ impl Default for SpaceshipState {
             health: PLAYER_MAX_HEALTH,
         }
     }
-}
-
-fn resource_setup(mut commands: Commands, query: Query<&Window, With<PrimaryWindow>>) {
-    let window = query.get_single().unwrap();
-    let win_size = WinSize {
-        w: window.width(),
-        h: window.height(),
-    };
-
-    commands.insert_resource(win_size);
 }

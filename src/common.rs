@@ -10,17 +10,16 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<DespawnEntity>()
-            .add_system(
-                projectile_hit_detection
-                    .run_if(is_playing)
-                    .in_set(EventSet::Spawn),
-            )
-            .add_system(
+        app.add_event::<DespawnEntity>().add_systems(
+            PreUpdate,
+            (
+                projectile_hit_detection.in_set(EventSet::Spawn),
                 despawn_entities_handler
                     .in_set(EventSet::HandleDespawn)
                     .after(EventSet::HandleHit),
-            );
+            )
+                .run_if(is_playing),
+        );
     }
 }
 
@@ -33,6 +32,7 @@ pub enum EntityType {
     Asteroid,
 }
 
+#[derive(Event)]
 pub struct DespawnEntity {
     pub entity: Entity,
     pub entity_type: EntityType,

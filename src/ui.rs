@@ -6,8 +6,8 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(setup_gameplay_ui.in_schedule(OnEnter(GameState::InGame)))
-            .add_system(spaceship_health_update.run_if(is_playing));
+        app.add_systems(OnEnter(GameState::InGame), setup_gameplay_ui)
+            .add_systems(Update, spaceship_health_update.run_if(is_playing));
     }
 }
 
@@ -37,7 +37,8 @@ fn setup_gameplay_ui(mut commands: Commands, spaceship_state: Res<SpaceshipState
             GameplayUi,
             NodeBundle {
                 style: Style {
-                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
                     justify_content: JustifyContent::FlexStart,
                     ..default()
                 },
@@ -48,7 +49,8 @@ fn setup_gameplay_ui(mut commands: Commands, spaceship_state: Res<SpaceshipState
             parent
                 .spawn(NodeBundle {
                     style: Style {
-                        size: Size::new(Val::Percent(100.0), Val::Auto),
+                        width: Val::Percent(100.0),
+                        height: Val::Auto,
                         padding: UiRect::all(Val::Px(10.0)),
                         ..default()
                     },
@@ -60,7 +62,8 @@ fn setup_gameplay_ui(mut commands: Commands, spaceship_state: Res<SpaceshipState
                             HealthPoint,
                             NodeBundle {
                                 style: Style {
-                                    size: Size::new(Val::Px(30.0), Val::Px(30.0)),
+                                    width: Val::Px(30.0),
+                                    height: Val::Px(30.0),
                                     margin: UiRect::all(Val::Px(5.0)),
                                     ..default()
                                 },

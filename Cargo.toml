@@ -5,9 +5,9 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-bevy = { version = "0.10.1", features = ["dynamic_linking"] }  # feature flag must be removed before deployment
+bevy = { version = "0.11.0", features = ["dynamic_linking"] }  # feature flag must be removed before deployment
 rand = "0.8"
-leafwing-input-manager = "0.9.3"
+leafwing-input-manager = "0.10.0"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

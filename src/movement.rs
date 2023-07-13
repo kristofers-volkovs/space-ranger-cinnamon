@@ -6,7 +6,8 @@ pub struct MovementPlugin;
 
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(
+        app.add_systems(
+            Update,
             apply_velocity
                 .run_if(is_playing)
                 .in_set(MovementSet::ApplyVelocity)

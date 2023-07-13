@@ -1,6 +1,7 @@
 // #![cfg_attr(debug_assertions, allow(dead_code, unused_imports))]
 
 use bevy::prelude::*;
+use bevy::reflect::TypePath;
 use leafwing_input_manager::prelude::*;
 
 use crate::common::{DespawnEntity, EntityType, EventSet};
@@ -17,33 +18,30 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpaceshipIsHit>()
-            .add_plugin(InputManagerPlugin::<SpaceshipAction>::default())
-            .add_system(spawn_spaceship.in_schedule(OnEnter(GameState::InGame)))
-            .add_system(
-                spaceship_movement
-                    .run_if(is_playing)
-                    .in_set(MovementSet::UpdateVelocity)
-                    .after(EventSet::HandleDespawn),
-            )
-            .add_system(
-                apply_spaceship_velocity
-                    .run_if(is_playing)
-                    .in_set(MovementSet::ApplyVelocity)
-                    .after(MovementSet::UpdateVelocity),
-            )
-            .add_system(
-                out_of_bounds_detection
-                    .run_if(is_playing)
-                    .in_set(EventSet::Spawn),
-            )
-            .add_system(
-                spaceship_hit_handler
-                    .run_if(is_playing)
-                    .in_set(EventSet::HandleHit)
-                    .after(EventSet::Spawn),
+            .add_plugins(InputManagerPlugin::<SpaceshipAction>::default())
+            .add_systems(OnEnter(GameState::InGame), spawn_spaceship)
+            .add_systems(
+                PreUpdate,
+                (
+                    out_of_bounds_detection.in_set(EventSet::Spawn),
+                    spaceship_hit_handler
+                        .in_set(EventSet::HandleHit)
+                        .after(EventSet::Spawn),
+                )
+                    .run_if(is_playing),
             )
             .add_systems(
-                (spaceship_shoot, spaceship_invincibility).distributive_run_if(is_playing),
+                Update,
+                (
+                    (spaceship_shoot, spaceship_invincibility),
+                    spaceship_movement
+                        .in_set(MovementSet::UpdateVelocity)
+                        .after(EventSet::HandleDespawn),
+                    apply_spaceship_velocity
+                        .in_set(MovementSet::ApplyVelocity)
+                        .after(MovementSet::UpdateVelocity),
+                )
+                    .run_if(is_playing),
             );
     }
 }
@@ -53,7 +51,7 @@ impl Plugin for PlayerPlugin {
 #[derive(Component, Debug)]
 pub struct Spaceship;
 
-#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, TypePath)]
 pub enum SpaceshipAction {
     MoveRight,
     MoveLeft,
@@ -90,7 +88,7 @@ struct ProjectileBundle {
     velocity: Velocity,
     movable: Movable,
     source: ProjectileSource,
-    #[bundle]
+    #[bundle()]
     sprite: SpriteBundle,
 }
 
@@ -219,6 +217,7 @@ impl SpaceshipShoot {
     }
 }
 
+#[derive(Event)]
 pub struct SpaceshipIsHit {
     pub entity: Entity,
 }
@@ -249,9 +248,9 @@ struct SpaceshipBundle {
     velocity: Velocity,
     dash: SpaceshipDash,
     shooting: SpaceshipShoot,
-    #[bundle]
+    #[bundle()]
     input_manager: InputManagerBundle<SpaceshipAction>,
-    #[bundle]
+    #[bundle()]
     sprite: SpriteBundle,
 }
 
