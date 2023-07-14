@@ -1,5 +1,4 @@
-use bevy::{prelude::*, window::WindowResolution};
-use consts::{PLAYER_MAX_HEALTH, WINDOW_HEIGHT, WINDOW_WIDTH};
+use bevy::{prelude::*, time::Stopwatch, window::WindowResolution};
 
 mod camera;
 mod common;
@@ -34,6 +33,7 @@ fn main() {
         .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<SpaceshipState>()
         .init_resource::<WinSize>()
+        .init_resource::<Stats>()
         // --- Initial game states ---
         .add_state::<GameState>()
         .add_state::<GameplayState>()
@@ -43,7 +43,10 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT),
+                        resolution: WindowResolution::new(
+                            consts::WINDOW_WIDTH,
+                            consts::WINDOW_HEIGHT,
+                        ),
                         title: "Space Ranger Cinnamon".to_string(),
                         resizable: false,
                         ..default()
@@ -69,8 +72,8 @@ pub struct WinSize {
 impl Default for WinSize {
     fn default() -> Self {
         Self {
-            w: WINDOW_WIDTH,
-            h: WINDOW_HEIGHT,
+            w: consts::WINDOW_WIDTH,
+            h: consts::WINDOW_HEIGHT,
         }
     }
 }
@@ -83,7 +86,32 @@ pub struct SpaceshipState {
 impl Default for SpaceshipState {
     fn default() -> Self {
         Self {
-            health: PLAYER_MAX_HEALTH,
+            health: consts::PLAYER_MAX_HEALTH,
         }
+    }
+}
+
+#[derive(Resource, Debug)]
+pub struct Stats {
+    pub score: u32,
+    pub watch: Stopwatch,
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        let mut watch = Stopwatch::new();
+        watch.pause();
+        Self { score: 0, watch }
+    }
+}
+
+impl Stats {
+    fn get_watch_time(&self) -> String {
+        let elapsed_mins = (self.watch.elapsed_secs() / 60.0).floor();
+        format!(
+            "{:.0}:{:.0}",
+            elapsed_mins,
+            self.watch.elapsed_secs() - elapsed_mins * 60.0,
+        )
     }
 }

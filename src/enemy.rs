@@ -5,8 +5,7 @@ use rand::{thread_rng, Rng};
 
 use crate::{
     common::{DespawnEntity, EntityType, EventSet},
-    consts::{ENEMY_Z, SPAWN_MARGIN},
-    is_playing,
+    consts, is_playing,
     movement::{Movable, Velocity},
     player::{Invulnerability, Spaceship, SpaceshipIsHit},
     WinSize,
@@ -63,13 +62,13 @@ impl EnemySpawner {
     fn spawn_location(&self, win_size: &WinSize) -> Vec3 {
         let mut rng = thread_rng();
 
-        let w_span = win_size.w / 2.0 + SPAWN_MARGIN;
-        let h_span = win_size.h / 2.0 + SPAWN_MARGIN;
+        let w_span = win_size.w / 2.0 + consts::SPAWN_MARGIN;
+        let h_span = win_size.h / 2.0 + consts::SPAWN_MARGIN;
 
         match self.location {
             EnemySpawnLocation::Top => {
-                let w_span = w_span - SPAWN_MARGIN;
-                Vec3::new(rng.gen_range(-w_span..w_span), h_span, ENEMY_Z)
+                let w_span = w_span - consts::SPAWN_MARGIN;
+                Vec3::new(rng.gen_range(-w_span..w_span), h_span, consts::ENEMY_Z)
             }
             // EnemySpawnLocation::Sides => {
             //     Vec3::new(

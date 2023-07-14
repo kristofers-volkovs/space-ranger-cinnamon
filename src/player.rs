@@ -5,11 +5,7 @@ use bevy::reflect::TypePath;
 use leafwing_input_manager::prelude::*;
 
 use crate::common::{DespawnEntity, EntityType, EventSet};
-use crate::consts::{
-    DESPAWN_MARGIN, PLAYER_DASH_COOLDOWN, PLAYER_DASH_SPEED, PLAYER_DASH_TIME_LEN,
-    PLAYER_FIRING_COOLDOWN, PLAYER_INVULNERABILITY_ANIMATION_TIME, PLAYER_INVULNERABILITY_TIME,
-    PLAYER_MOVEMENT_SPEED, PLAYER_POSITION, PLAYER_PROJECTILE_SPEED, PLAYER_PROJECTILE_Z, PLAYER_Z,
-};
+use crate::consts;
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
 use crate::{is_playing, GameState, SpaceshipState, WinSize};
 
@@ -107,7 +103,7 @@ impl Dash {
     fn new(direction: Direction) -> Self {
         Self {
             direction,
-            timer: Timer::from_seconds(PLAYER_DASH_TIME_LEN, TimerMode::Once),
+            timer: Timer::from_seconds(consts::PLAYER_DASH_TIME_LEN, TimerMode::Once),
         }
     }
 
@@ -118,8 +114,8 @@ impl Dash {
             let elapsed_secs: f32 = self.timer.elapsed_secs();
 
             let boost = {
-                let speed = PLAYER_DASH_SPEED;
-                let dash_time = PLAYER_DASH_TIME_LEN;
+                let speed = consts::PLAYER_DASH_SPEED;
+                let dash_time = consts::PLAYER_DASH_TIME_LEN;
                 let half_dash_time = dash_time / 2.0;
 
                 let parabola_max =
@@ -232,9 +228,9 @@ pub struct Invulnerability {
 impl Invulnerability {
     pub fn new() -> Self {
         Self {
-            length: PLAYER_INVULNERABILITY_TIME,
+            length: consts::PLAYER_INVULNERABILITY_TIME,
             animation_timer: Timer::from_seconds(
-                PLAYER_INVULNERABILITY_ANIMATION_TIME,
+                consts::PLAYER_INVULNERABILITY_ANIMATION_TIME,
                 TimerMode::Repeating,
             ),
         }
@@ -273,7 +269,7 @@ fn spawn_spaceship(mut commands: Commands) {
                 custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..default()
             },
-            transform: Transform::from_xyz(0., PLAYER_POSITION, PLAYER_Z),
+            transform: Transform::from_xyz(0., consts::PLAYER_POSITION, consts::PLAYER_Z),
             ..default()
         },
     });
@@ -310,11 +306,11 @@ fn spaceship_movement(
         match &mut spaceship_dash.state {
             DashState::Idle => {
                 if action_state.pressed(SpaceshipAction::MoveRight) {
-                    velocity.x += PLAYER_MOVEMENT_SPEED;
+                    velocity.x += consts::PLAYER_MOVEMENT_SPEED;
                 }
 
                 if action_state.pressed(SpaceshipAction::MoveLeft) {
-                    velocity.x -= PLAYER_MOVEMENT_SPEED;
+                    velocity.x -= consts::PLAYER_MOVEMENT_SPEED;
                 }
             }
             DashState::Dashing(ref mut dash) => match dash.calc_boost(&time) {
@@ -323,7 +319,7 @@ fn spaceship_movement(
                 }
                 None => {
                     spaceship_dash.state = DashState::Cooldown(Timer::from_seconds(
-                        PLAYER_DASH_COOLDOWN,
+                        consts::PLAYER_DASH_COOLDOWN,
                         TimerMode::Once,
                     ));
                 }
@@ -365,8 +361,8 @@ fn out_of_bounds_detection(
     for (entity, tf, movable, entity_type) in query.iter() {
         if movable.auto_despawn {
             let translation = tf.translation;
-            let h_bound = win_size.h / 2.0 + DESPAWN_MARGIN;
-            let w_bound = win_size.w / 2.0 + DESPAWN_MARGIN;
+            let h_bound = win_size.h / 2.0 + consts::DESPAWN_MARGIN;
+            let w_bound = win_size.w / 2.0 + consts::DESPAWN_MARGIN;
 
             if translation.y > h_bound
                 || translation.y < -h_bound
@@ -413,7 +409,7 @@ fn spaceship_shoot(
                     entity_type: EntityType::Projectile,
                     velocity: Velocity {
                         x: 0.,
-                        y: PLAYER_PROJECTILE_SPEED,
+                        y: consts::PLAYER_PROJECTILE_SPEED,
                     },
                     movable: Movable { auto_despawn: true },
                     source: ProjectileSource::FromSpaceship,
@@ -424,14 +420,14 @@ fn spaceship_shoot(
                             ..default()
                         },
                         transform: Transform::from_translation(
-                            tf.translation * Vec2::ONE.extend(PLAYER_PROJECTILE_Z),
+                            tf.translation * Vec2::ONE.extend(consts::PLAYER_PROJECTILE_Z),
                         ),
                         ..default()
                     },
                 });
 
                 spaceship_shoot.state = ShootingState::Cooldown(Timer::from_seconds(
-                    PLAYER_FIRING_COOLDOWN,
+                    consts::PLAYER_FIRING_COOLDOWN,
                     TimerMode::Once,
                 ));
             }
