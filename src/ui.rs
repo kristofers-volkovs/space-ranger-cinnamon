@@ -16,6 +16,7 @@ impl Plugin for UiPlugin {
                 spaceship_health_update,
                 update_gameplay_watch,
                 update_gameplay_score,
+                button_press_handler,
             )
                 .run_if(is_playing),
         );
@@ -45,6 +46,9 @@ struct GameplayTime;
 
 #[derive(Component)]
 struct GameplayScore;
+
+#[derive(Component)]
+struct GameplayPauseButton;
 
 // ===
 
@@ -96,6 +100,7 @@ fn setup_gameplay_ui(
                                             margin: UiRect::all(Val::Px(5.0)),
                                             ..default()
                                         },
+                                        border_color: Color::BLUE.into(),
                                         background_color: {
                                             if spaceship_state.health >= idx {
                                                 BackgroundColor::from(
@@ -148,6 +153,18 @@ fn setup_gameplay_ui(
                                 ),
                             ));
                         });
+                })
+                .with_children(|parent| {
+                    parent.spawn((GameplayPauseButton, ButtonBundle {
+                        style: Style {
+                            width: Val::Px(50.0),
+                            height: Val::Px(50.0),
+                            margin: UiRect::all(Val::Px(5.0)),
+                            ..default()
+                        },
+                        background_color: Color::WHITE.into(),
+                        ..default()
+                    }));
                 });
         });
 }
@@ -180,5 +197,13 @@ fn update_gameplay_watch(
 fn update_gameplay_score(stats: Res<Stats>, mut ui_query: Query<&mut Text, With<GameplayScore>>) {
     if let Ok(mut ui_element) = ui_query.get_single_mut() {
         ui_element.sections[0].value = stats.score.to_string();
+    }
+}
+
+fn button_press_handler(buttons: Query<&Interaction, With<GameplayPauseButton>>) {
+    if let Ok(interaction) = buttons.get_single() {
+        if let Interaction::Pressed = interaction {
+            println!("Button pressed!");
+        }
     }
 }
