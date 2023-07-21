@@ -68,19 +68,6 @@ pub fn despawn_entities<T: Component>(mut commands: Commands, query: Query<Entit
     }
 }
 
-pub fn clicked_btn<T: Component>(query: Query<&Interaction, With<T>>) -> bool {
-    for interaction in query.iter() {
-        if let Interaction::Pressed = interaction {
-            return true;
-        }
-    }
-    false
-}
-
-pub fn pressed_esc(kdb: Res<Input<KeyCode>>) -> bool {
-    kdb.just_pressed(KeyCode::Escape)
-}
-
 fn projectile_hit_detection(
     mut ev_despawn: EventWriter<DespawnEntity>,
     entity_query: Query<
