@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{consts, is_playing, GameState, SpaceshipState, Stats};
+use crate::{
+    common::{clicked_btn, despawn_entities, pressed_esc},
+    consts, is_playing, GameState, GameplayState, SpaceshipState, Stats,
+};
 
 pub struct UiPlugin;
 
@@ -16,10 +19,16 @@ impl Plugin for UiPlugin {
                 spaceship_health_update,
                 update_gameplay_watch,
                 update_gameplay_score,
-                button_press_handler,
+                pause_gameplay.run_if(clicked_btn::<GameplayPauseBtn>.or_else(pressed_esc)),
             )
                 .run_if(is_playing),
-        );
+        )
+        .add_systems(OnEnter(GameplayState::Paused), setup_pause_menu)
+        .add_systems(
+            Update,
+            unpause_gameplay.run_if(clicked_btn::<MenuExitBtn>.or_else(pressed_esc)),
+        )
+        .add_systems(OnExit(GameplayState::Paused), despawn_entities::<MenuPause>);
     }
 }
 
@@ -27,6 +36,9 @@ impl Plugin for UiPlugin {
 
 #[derive(Component)]
 struct GameplayUi;
+
+#[derive(Component)]
+struct MenuPause;
 
 #[derive(Component)]
 struct HealthPoint;
@@ -48,7 +60,10 @@ struct GameplayTime;
 struct GameplayScore;
 
 #[derive(Component)]
-struct GameplayPauseButton;
+struct GameplayPauseBtn;
+
+#[derive(Component)]
+struct MenuExitBtn;
 
 // ===
 
@@ -155,16 +170,19 @@ fn setup_gameplay_ui(
                         });
                 })
                 .with_children(|parent| {
-                    parent.spawn((GameplayPauseButton, ButtonBundle {
-                        style: Style {
-                            width: Val::Px(50.0),
-                            height: Val::Px(50.0),
-                            margin: UiRect::all(Val::Px(5.0)),
+                    parent.spawn((
+                        GameplayPauseBtn,
+                        ButtonBundle {
+                            style: Style {
+                                width: Val::Px(50.0),
+                                height: Val::Px(50.0),
+                                margin: UiRect::all(Val::Px(5.0)),
+                                ..default()
+                            },
+                            background_color: Color::WHITE.into(),
                             ..default()
                         },
-                        background_color: Color::WHITE.into(),
-                        ..default()
-                    }));
+                    ));
                 });
         });
 }
@@ -200,10 +218,44 @@ fn update_gameplay_score(stats: Res<Stats>, mut ui_query: Query<&mut Text, With<
     }
 }
 
-fn button_press_handler(buttons: Query<&Interaction, With<GameplayPauseButton>>) {
-    if let Ok(interaction) = buttons.get_single() {
-        if let Interaction::Pressed = interaction {
-            println!("Button pressed!");
-        }
-    }
+fn pause_gameplay(mut commands: Commands) {
+    commands.insert_resource(NextState(Some(GameplayState::Paused)));
+}
+
+fn unpause_gameplay(mut commands: Commands) {
+    commands.insert_resource(NextState(Some(GameplayState::Playing)));
+}
+
+fn setup_pause_menu(mut commands: Commands) {
+    commands
+        .spawn((
+            MenuPause,
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    justify_content: JustifyContent::Center,
+                    align_content: AlignContent::Center,
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                background_color: Color::rgba(0.0, 0.0, 0.0, 0.5).into(),
+                ..default()
+            },
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                MenuExitBtn,
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(50.0),
+                        height: Val::Px(50.0),
+                        margin: UiRect::all(Val::Px(5.0)),
+                        ..default()
+                    },
+                    background_color: Color::WHITE.into(),
+                    ..default()
+                },
+            ));
+        });
 }
