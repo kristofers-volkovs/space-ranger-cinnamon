@@ -2,6 +2,8 @@
 run:
 	cargo run
 
+checks:
+	cargo run -p ci -- lints
+
 fmt:
-	cargo clippy -- -W clippy::correctness -D warnings && \
-	cargo fmt
+	cargo fmt --all
