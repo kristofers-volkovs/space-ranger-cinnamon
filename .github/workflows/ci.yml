@@ -1,0 +1,32 @@
+name: CI
+
+on: [push]
+
+jobs:
+    check-lints:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Cache Cargo
+              uses: actions/cache@v3
+              with:
+                path: |
+                  ~/.cargo/bin
+                  ~/.cargo/registry/index/
+                  ~/.cargo/registry/cache/
+                  ~/.cargo/git/db/
+                  target/
+                key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
+
+            - name: Install Linters
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                components: rustfmt, clippy
+
+            - name: Install alsa nad udev
+              run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+
+            - name: Check
+              run: cargo run -p ci -- lints
