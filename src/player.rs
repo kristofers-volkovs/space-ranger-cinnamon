@@ -401,8 +401,7 @@ fn spaceship_shoot(
         }
 
         match &mut spaceship_shoot.state {
-            ShootingState::Idle => (),
-            ShootingState::Charging => (),
+            ShootingState::Idle | ShootingState::Charging => (),
             ShootingState::Shooting => {
                 commands.spawn(ProjectileBundle {
                     projectile: Projectile,
