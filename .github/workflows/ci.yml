@@ -1,6 +1,9 @@
 name: CI
 
-on: [push]
+on:
+    push:
+        branches:
+            - main
 
 jobs:
     check-lints:
@@ -9,23 +12,15 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v3
 
-            - name: Cache Cargo
-              uses: actions/cache@v3
-              with:
-                path: |
-                  ~/.cargo/bin
-                  ~/.cargo/registry/index/
-                  ~/.cargo/registry/cache/
-                  ~/.cargo/git/db/
-                  target/
-                key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
-
             - name: Install Linters
               uses: dtolnay/rust-toolchain@stable
               with:
                 components: rustfmt, clippy
 
-            - name: Install alsa nad udev
+            - name: Cache Cargo
+              uses: Leafwing-Studios/cargo-cache@v1.1.0
+
+            - name: Install alsa and udev
               run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
 
             - name: Check
