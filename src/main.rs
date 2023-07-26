@@ -34,6 +34,7 @@ fn main() {
         .init_resource::<SpaceshipState>()
         .init_resource::<WinSize>()
         .init_resource::<Stats>()
+        .add_systems(Startup, load_font)
         // --- Initial game states ---
         .add_state::<GameState>()
         .add_state::<GameplayState>()
@@ -114,4 +115,12 @@ impl Stats {
             self.watch.elapsed_secs() - elapsed_mins * 60.0,
         )
     }
+}
+
+#[derive(Resource, Debug)]
+pub struct FontHandle(Handle<Font>);
+
+fn load_font(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font = asset_server.load("fonts/PixeloidSans-mLxMm.ttf");
+    commands.insert_resource(FontHandle(font));
 }
