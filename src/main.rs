@@ -1,4 +1,5 @@
 use bevy::{prelude::*, time::Stopwatch, window::WindowResolution};
+// use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod camera;
 mod common;
@@ -61,6 +62,7 @@ fn main() {
             common::CommonPlugin,
             ui::UiPlugin,
         ))
+        // .add_plugins(WorldInspectorPlugin::new())
         .run();
 }
 

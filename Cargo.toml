@@ -11,6 +11,7 @@ members = ["./", "tools/ci",]
 bevy = { version = "0.11.0", features = ["dynamic_linking"] }  # feature flag must be removed before deployment
 rand = "0.8"
 leafwing-input-manager = "0.10.0"
+bevy-inspector-egui = "0.19"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]
