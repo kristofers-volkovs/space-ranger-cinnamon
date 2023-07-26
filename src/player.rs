@@ -15,7 +15,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpaceshipIsHit>()
             .add_plugins(InputManagerPlugin::<SpaceshipAction>::default())
-            .add_systems(OnEnter(GameState::InGame), spawn_spaceship)
+            .add_systems(OnEnter(GameState::Gameplay), spawn_spaceship)
             .add_systems(
                 PreUpdate,
                 (

@@ -11,10 +11,10 @@ mod ui;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
 pub enum GameState {
+    #[default]
     MainMenu,
     LoadingGame,
-    #[default]
-    InGame,
+    Gameplay,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, States, Default)]
@@ -25,7 +25,7 @@ pub enum GameplayState {
 }
 
 pub fn is_playing(game: Res<State<GameState>>, gameplay: Res<State<GameplayState>>) -> bool {
-    matches!(game.get(), GameState::InGame) && matches!(gameplay.get(), GameplayState::Playing)
+    matches!(game.get(), GameState::Gameplay) && matches!(gameplay.get(), GameplayState::Playing)
 }
 
 fn main() {

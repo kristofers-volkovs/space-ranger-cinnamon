@@ -33,6 +33,11 @@ pub fn unpause_gameplay_watch(mut stats: ResMut<Stats>) {
     stats.watch.unpause();
 }
 
+pub fn reset_gameplay_watch(mut stats: ResMut<Stats>) {
+    stats.watch.pause();
+    stats.watch.reset();
+}
+
 pub fn setup_gameplay_ui(
     mut commands: Commands,
     spaceship_state: Res<SpaceshipState>,

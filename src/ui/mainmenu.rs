@@ -3,41 +3,38 @@ use bevy::prelude::*;
 use crate::FontHandle;
 
 #[derive(Component)]
-pub struct MenuPause;
+pub struct MainMenuUi;
 
 #[derive(Component)]
-pub struct MenuCloseBtn;
+pub struct MainMenuPlayBtn;
 
 #[derive(Component)]
-pub struct MenuExitBtn;
+pub struct MainMenuExitBtn;
 
 // ===
 
-pub fn setup_pause_menu(mut commands: Commands, font: Res<FontHandle>) {
+pub fn setup_main_menu_ui(mut commands: Commands, font: Res<FontHandle>) {
     commands
         .spawn((
-            MenuPause,
+            MainMenuUi,
             NodeBundle {
                 style: Style {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     justify_content: JustifyContent::Center,
-                    align_content: AlignContent::Center,
-                    position_type: PositionType::Absolute,
+                    flex_direction: FlexDirection::Column,
                     ..default()
                 },
-                background_color: Color::rgba(0.0, 0.0, 0.0, 0.5).into(),
                 ..default()
             },
         ))
         .with_children(|parent| {
             parent
                 .spawn((
-                    MenuExitBtn,
+                    MainMenuPlayBtn,
                     ButtonBundle {
                         style: Style {
                             padding: UiRect::all(Val::Px(5.0)),
-                            height: Val::Px(50.0),
                             margin: UiRect::all(Val::Px(5.0)),
                             ..default()
                         },
@@ -47,7 +44,7 @@ pub fn setup_pause_menu(mut commands: Commands, font: Res<FontHandle>) {
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
-                        "Exit",
+                        "Play",
                         TextStyle {
                             font: font.0.clone(),
                             font_size: 40.0,
@@ -59,11 +56,10 @@ pub fn setup_pause_menu(mut commands: Commands, font: Res<FontHandle>) {
         .with_children(|parent| {
             parent
                 .spawn((
-                    MenuCloseBtn,
+                    MainMenuExitBtn,
                     ButtonBundle {
                         style: Style {
-                            width: Val::Px(50.0),
-                            height: Val::Px(50.0),
+                            padding: UiRect::all(Val::Px(5.0)),
                             margin: UiRect::all(Val::Px(5.0)),
                             ..default()
                         },
@@ -73,7 +69,7 @@ pub fn setup_pause_menu(mut commands: Commands, font: Res<FontHandle>) {
                 ))
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
-                        "X",
+                        "Exit",
                         TextStyle {
                             font: font.0.clone(),
                             font_size: 40.0,
