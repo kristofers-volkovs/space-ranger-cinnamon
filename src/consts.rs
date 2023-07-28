@@ -31,3 +31,7 @@ pub const PLAYER_PROJECTILE_Z: f32 = 1.0;
 // --- Enemy ---
 
 pub const ENEMY_Z: f32 = 0.0;
+
+// --- Score ---
+
+pub const SCORE_ADD_ASTEROID: u32 = 2;
