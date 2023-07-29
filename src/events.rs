@@ -1,8 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    common::EntityType, consts, enemy::EnemyCount, is_playing, player::Invulnerability,
-    SpaceshipState, Stats,
+    common::EntityType,
+    consts,
+    enemy::EnemyCount,
+    is_playing,
+    player::{Invulnerability, SpaceshipState},
+    Stats,
 };
 
 pub struct EventsPlugin;

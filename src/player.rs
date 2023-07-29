@@ -14,7 +14,8 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputManagerPlugin::<SpaceshipAction>::default())
+        app.init_resource::<SpaceshipState>()
+            .add_plugins(InputManagerPlugin::<SpaceshipAction>::default())
             .add_systems(OnEnter(GameState::Gameplay), spawn_spaceship)
             .add_systems(
                 Update,
@@ -33,6 +34,19 @@ impl Plugin for PlayerPlugin {
 }
 
 // ===
+
+#[derive(Resource, Debug)]
+pub struct SpaceshipState {
+    pub health: u32,
+}
+
+impl Default for SpaceshipState {
+    fn default() -> Self {
+        Self {
+            health: consts::PLAYER_MAX_HEALTH,
+        }
+    }
+}
 
 #[derive(Component, Debug)]
 pub struct Spaceship;

@@ -33,7 +33,6 @@ fn main() {
     App::new()
         // --- Initial resources ---
         .insert_resource(ClearColor(Color::BLACK))
-        .init_resource::<SpaceshipState>()
         .init_resource::<WinSize>()
         .init_resource::<Stats>()
         .add_systems(Startup, load_font)
@@ -81,19 +80,6 @@ impl Default for WinSize {
         Self {
             w: consts::WINDOW_WIDTH,
             h: consts::WINDOW_HEIGHT,
-        }
-    }
-}
-
-#[derive(Resource, Debug)]
-pub struct SpaceshipState {
-    pub health: u32,
-}
-
-impl Default for SpaceshipState {
-    fn default() -> Self {
-        Self {
-            health: consts::PLAYER_MAX_HEALTH,
         }
     }
 }

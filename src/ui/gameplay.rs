@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{consts, SpaceshipState, Stats};
+use crate::{consts, player::SpaceshipState, Stats};
 
 #[derive(Component)]
 pub struct GameplayUi;
