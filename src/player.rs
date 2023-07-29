@@ -4,28 +4,18 @@ use bevy::prelude::*;
 use bevy::reflect::TypePath;
 use leafwing_input_manager::prelude::*;
 
-use crate::common::{DespawnEntity, EntityType, EventSet};
+use crate::common::EntityType;
 use crate::consts;
+use crate::events::EventSet;
 use crate::movement::{Direction, Movable, MovementSet, Velocity};
-use crate::{is_playing, GameState, SpaceshipState, WinSize};
+use crate::{is_playing, GameState, WinSize};
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SpaceshipIsHit>()
-            .add_plugins(InputManagerPlugin::<SpaceshipAction>::default())
+        app.add_plugins(InputManagerPlugin::<SpaceshipAction>::default())
             .add_systems(OnEnter(GameState::Gameplay), spawn_spaceship)
-            .add_systems(
-                PreUpdate,
-                (
-                    out_of_bounds_detection.in_set(EventSet::Spawn),
-                    spaceship_hit_handler
-                        .in_set(EventSet::HandleHit)
-                        .after(EventSet::Spawn),
-                )
-                    .run_if(is_playing),
-            )
             .add_systems(
                 Update,
                 (
@@ -213,11 +203,6 @@ impl SpaceshipShoot {
     }
 }
 
-#[derive(Event)]
-pub struct SpaceshipIsHit {
-    pub entity: Entity,
-}
-
 #[derive(Component, Debug)]
 #[component(storage = "SparseSet")]
 pub struct Invulnerability {
@@ -353,31 +338,6 @@ fn apply_spaceship_velocity(
     }
 }
 
-fn out_of_bounds_detection(
-    mut ev_despawn: EventWriter<DespawnEntity>,
-    win_size: Res<WinSize>,
-    query: Query<(Entity, &Transform, &Movable, &EntityType)>,
-) {
-    for (entity, tf, movable, entity_type) in query.iter() {
-        if movable.auto_despawn {
-            let translation = tf.translation;
-            let h_bound = win_size.h / 2.0 + consts::DESPAWN_MARGIN;
-            let w_bound = win_size.w / 2.0 + consts::DESPAWN_MARGIN;
-
-            if translation.y > h_bound
-                || translation.y < -h_bound
-                || translation.x > w_bound
-                || translation.x < -w_bound
-            {
-                ev_despawn.send(DespawnEntity {
-                    entity,
-                    entity_type: *entity_type,
-                });
-            }
-        }
-    }
-}
-
 fn spaceship_shoot(
     mut commands: Commands,
     mut player_query: Query<
@@ -436,30 +396,6 @@ fn spaceship_shoot(
                 if timer.finished() {
                     spaceship_shoot.state = ShootingState::Idle;
                 }
-            }
-        }
-    }
-}
-
-fn spaceship_hit_handler(
-    mut commands: Commands,
-    mut hit_event: EventReader<SpaceshipIsHit>,
-    mut ev_despawn: EventWriter<DespawnEntity>,
-    mut spaceship_state: ResMut<SpaceshipState>,
-) {
-    if let Some(hit_ev) = hit_event.iter().next() {
-        if spaceship_state.health > 0 {
-            spaceship_state.health -= 1;
-
-            if spaceship_state.health == 0 {
-                ev_despawn.send(DespawnEntity {
-                    entity: hit_ev.entity,
-                    entity_type: EntityType::Spaceship,
-                });
-            } else {
-                commands
-                    .entity(hit_ev.entity)
-                    .insert(Invulnerability::new());
             }
         }
     }

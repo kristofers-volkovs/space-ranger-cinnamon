@@ -4,10 +4,12 @@ use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 
 use crate::{
-    common::{DespawnEntity, EntityType, EventSet},
-    consts, is_playing,
+    common::EntityType,
+    consts,
+    events::{DespawnEntity, EventSet, SpaceshipIsHit},
+    is_playing,
     movement::{Movable, Velocity},
-    player::{Invulnerability, Spaceship, SpaceshipIsHit},
+    player::{Invulnerability, Spaceship},
     WinSize,
 };
 
@@ -21,7 +23,7 @@ impl Plugin for EnemyPlugin {
             .add_systems(FixedUpdate, spawn_enemy.run_if(is_playing))
             .add_systems(
                 PreUpdate,
-                enemy_collision_detection
+                (out_of_bounds_detection, enemy_collision_detection)
                     .run_if(is_playing)
                     .in_set(EventSet::Spawn),
             );
@@ -152,12 +154,35 @@ fn enemy_collision_detection(
             );
 
             if collision.is_some() {
-                ev_spaceship_hit.send(SpaceshipIsHit {
-                    entity: spaceship_entity,
-                });
+                ev_spaceship_hit.send(SpaceshipIsHit(spaceship_entity));
                 ev_despawn.send(DespawnEntity {
                     entity: enemy_entity,
                     entity_type: *enemy_type,
+                });
+            }
+        }
+    }
+}
+
+fn out_of_bounds_detection(
+    mut ev_despawn: EventWriter<DespawnEntity>,
+    win_size: Res<WinSize>,
+    query: Query<(Entity, &Transform, &Movable, &EntityType)>,
+) {
+    for (entity, tf, movable, entity_type) in query.iter() {
+        if movable.auto_despawn {
+            let translation = tf.translation;
+            let h_bound = win_size.h / 2.0 + consts::DESPAWN_MARGIN;
+            let w_bound = win_size.w / 2.0 + consts::DESPAWN_MARGIN;
+
+            if translation.y > h_bound
+                || translation.y < -h_bound
+                || translation.x > w_bound
+                || translation.x < -w_bound
+            {
+                ev_despawn.send(DespawnEntity {
+                    entity,
+                    entity_type: *entity_type,
                 });
             }
         }

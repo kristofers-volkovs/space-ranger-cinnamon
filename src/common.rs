@@ -1,32 +1,21 @@
 use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide, utils::HashSet};
 
 use crate::{
-    consts,
-    enemy::EnemyCount,
+    events::{AddScore, AddScoreType, DespawnEntity, EventSet},
     is_playing,
     player::{Invulnerability, Projectile, ProjectileSource},
-    Stats,
 };
 
 pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<DespawnEntity>()
-            .add_event::<AddScore>()
-            .add_systems(
-                PreUpdate,
-                (
-                    projectile_hit_detection.in_set(EventSet::Spawn),
-                    despawn_entities_handler
-                        .in_set(EventSet::HandleDespawn)
-                        .after(EventSet::HandleHit),
-                    add_score_handler
-                        .in_set(EventSet::HandleScore)
-                        .after(EventSet::HandleDespawn),
-                )
-                    .run_if(is_playing),
-            );
+        app.add_systems(
+            PreUpdate,
+            projectile_hit_detection
+                .in_set(EventSet::Spawn)
+                .run_if(is_playing),
+        );
     }
 }
 
@@ -39,61 +28,7 @@ pub enum EntityType {
     Asteroid,
 }
 
-#[derive(Event)]
-pub struct DespawnEntity {
-    pub entity: Entity,
-    pub entity_type: EntityType,
-}
-
-pub enum AddScoreType {
-    EnemyDestroyed(EntityType),
-}
-
-#[derive(Event)]
-pub struct AddScore(AddScoreType);
-
-#[derive(SystemSet, Clone, Hash, Debug, Eq, PartialEq)]
-pub enum EventSet {
-    Spawn,
-    HandleHit,
-    HandleDespawn,
-    HandleScore,
-}
-
 // ===
-
-fn despawn_entities_handler(
-    mut commands: Commands,
-    mut despawn_events: EventReader<DespawnEntity>,
-    mut enemy_count: ResMut<EnemyCount>,
-) {
-    for despawn_ev in despawn_events.iter() {
-        commands.entity(despawn_ev.entity).despawn();
-
-        if matches!(despawn_ev.entity_type, EntityType::Asteroid) {
-            enemy_count.asteroids -= 1;
-        }
-    }
-}
-
-fn add_score_handler(mut add_score_events: EventReader<AddScore>, mut stats: ResMut<Stats>) {
-    for add_score_ev in add_score_events.iter() {
-        match add_score_ev.0 {
-            AddScoreType::EnemyDestroyed(entity_type) => {
-                if let EntityType::Asteroid = entity_type {
-                    stats.score += consts::SCORE_ADD_ASTEROID;
-                }
-            }
-        }
-    }
-}
-
-// Despawns all entities that have a specific component attached to it
-pub fn despawn_entities<T: Component>(mut commands: Commands, query: Query<Entity, With<T>>) {
-    for entity in query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
-}
 
 fn projectile_hit_detection(
     mut ev_despawn: EventWriter<DespawnEntity>,

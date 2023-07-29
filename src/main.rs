@@ -5,6 +5,7 @@ mod camera;
 mod common;
 mod consts;
 mod enemy;
+mod events;
 mod movement;
 mod player;
 mod ui;
@@ -61,10 +62,13 @@ fn main() {
             movement::MovementPlugin,
             common::CommonPlugin,
             ui::UiPlugin,
+            events::EventsPlugin,
         ))
         // .add_plugins(WorldInspectorPlugin::new())
         .run();
 }
+
+// ===
 
 #[derive(Resource, Debug)]
 pub struct WinSize {
@@ -122,7 +126,16 @@ impl Stats {
 #[derive(Resource, Debug)]
 pub struct FontHandle(Handle<Font>);
 
+// ===
+
 fn load_font(mut commands: Commands, asset_server: Res<AssetServer>) {
     let font = asset_server.load("fonts/PixeloidSans-mLxMm.ttf");
     commands.insert_resource(FontHandle(font));
+}
+
+// Despawns all entities that have a specific component attached to it
+pub fn despawn_entities<T: Component>(mut commands: Commands, query: Query<Entity, With<T>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
 }

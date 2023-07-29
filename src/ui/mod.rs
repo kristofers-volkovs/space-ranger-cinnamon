@@ -1,9 +1,6 @@
 use bevy::{app::AppExit, prelude::*};
 
-use crate::{
-    common::{despawn_entities, EntityType},
-    is_playing, GameState, GameplayState,
-};
+use crate::{common::EntityType, despawn_entities, is_playing, GameState, GameplayState};
 
 mod gameplay;
 mod mainmenu;
