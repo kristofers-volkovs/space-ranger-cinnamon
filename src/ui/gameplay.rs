@@ -33,9 +33,10 @@ pub fn unpause_gameplay_watch(mut stats: ResMut<Stats>) {
     stats.watch.unpause();
 }
 
-pub fn reset_gameplay_watch(mut stats: ResMut<Stats>) {
+pub fn reset_gameplay_stats(mut stats: ResMut<Stats>) {
     stats.watch.pause();
     stats.watch.reset();
+    stats.score = 0;
 }
 
 pub fn setup_gameplay_ui(
