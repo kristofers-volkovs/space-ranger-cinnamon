@@ -163,7 +163,7 @@ fn stage_manager(
             StageState::Spawning(ref mut spawners) => {
                 let mut finished_spawners = vec![];
 
-                for (idx, mut spawner) in spawners.iter_mut().enumerate() {
+                for (idx, spawner) in spawners.iter_mut().enumerate() {
                     if spawner.spawned >= spawner.spawn_total {
                         finished_spawners.push(idx);
                         continue;
