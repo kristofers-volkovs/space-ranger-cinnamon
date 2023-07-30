@@ -5,7 +5,7 @@ use crate::{
     consts,
     enemy::EnemyCount,
     is_playing,
-    player::{Invulnerability, SpaceshipState},
+    player::{Invulnerability, SpaceshipHealth},
     Stats,
 };
 
@@ -92,19 +92,21 @@ fn spaceship_hit_handler(
     mut commands: Commands,
     mut hit_event: EventReader<SpaceshipIsHit>,
     mut ev_despawn: EventWriter<DespawnEntity>,
-    mut spaceship_state: ResMut<SpaceshipState>,
+    mut spaceship_query: Query<&mut SpaceshipHealth>,
 ) {
-    if let Some(hit_ev) = hit_event.iter().next() {
-        if spaceship_state.health > 0 {
-            spaceship_state.health -= 1;
+    if let Ok(mut health) = spaceship_query.get_single_mut() {
+        if let Some(hit_ev) = hit_event.iter().next() {
+            if health.0 > 0 {
+                health.0 -= 1;
 
-            if spaceship_state.health == 0 {
-                ev_despawn.send(DespawnEntity {
-                    entity: hit_ev.0,
-                    entity_type: EntityType::Spaceship,
-                });
-            } else {
-                commands.entity(hit_ev.0).insert(Invulnerability::new());
+                if health.0 == 0 {
+                    ev_despawn.send(DespawnEntity {
+                        entity: hit_ev.0,
+                        entity_type: EntityType::Spaceship,
+                    });
+                } else {
+                    commands.entity(hit_ev.0).insert(Invulnerability::new());
+                }
             }
         }
     }

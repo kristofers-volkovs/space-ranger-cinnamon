@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{consts, player::SpaceshipState, Stats};
+use crate::{consts, player::SpaceshipHealth, Stats};
 
 #[derive(Component)]
 pub struct GameplayUi;
@@ -39,11 +39,7 @@ pub fn reset_gameplay_stats(mut stats: ResMut<Stats>) {
     stats.score = 0;
 }
 
-pub fn setup_gameplay_ui(
-    mut commands: Commands,
-    spaceship_state: Res<SpaceshipState>,
-    stats: Res<Stats>,
-) {
+pub fn setup_gameplay_ui(mut commands: Commands, stats: Res<Stats>) {
     commands
         .spawn((
             GameplayUi,
@@ -73,7 +69,7 @@ pub fn setup_gameplay_ui(
                     parent
                         .spawn(NodeBundle { ..default() })
                         .with_children(|parent| {
-                            for idx in 1..=consts::PLAYER_MAX_HEALTH {
+                            for _ in 1..=consts::PLAYER_MAX_HEALTH {
                                 parent.spawn((
                                     HealthPoint,
                                     NodeBundle {
@@ -85,15 +81,9 @@ pub fn setup_gameplay_ui(
                                         },
                                         border_color: Color::BLUE.into(),
                                         background_color: {
-                                            if spaceship_state.health >= idx {
-                                                BackgroundColor::from(
-                                                    HealthPoint::full_health_point_color(),
-                                                )
-                                            } else {
-                                                BackgroundColor::from(
-                                                    HealthPoint::empty_health_point_color(),
-                                                )
-                                            }
+                                            BackgroundColor::from(
+                                                HealthPoint::empty_health_point_color(),
+                                            )
                                         },
                                         ..default()
                                     },
@@ -156,14 +146,16 @@ pub fn setup_gameplay_ui(
 }
 
 pub fn spaceship_health_update(
-    spaceship_state: Res<SpaceshipState>,
+    spaceship_query: Query<&SpaceshipHealth>,
     mut ui_query: Query<&mut BackgroundColor, With<HealthPoint>>,
 ) {
-    for (idx, mut ui_element) in ui_query.iter_mut().enumerate() {
-        if idx >= spaceship_state.health as usize {
-            ui_element.0 = HealthPoint::empty_health_point_color();
-        } else {
-            ui_element.0 = HealthPoint::full_health_point_color();
+    if let Ok(health) = spaceship_query.get_single() {
+        for (idx, mut ui_element) in ui_query.iter_mut().enumerate() {
+            if idx >= health.0 as usize {
+                ui_element.0 = HealthPoint::empty_health_point_color();
+            } else {
+                ui_element.0 = HealthPoint::full_health_point_color();
+            }
         }
     }
 }
