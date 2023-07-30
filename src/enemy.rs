@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 
@@ -9,24 +7,22 @@ use crate::{
     events::{DespawnEntity, EventSet, SpaceshipIsHit},
     is_playing,
     movement::{Movable, Velocity},
-    player::{Invulnerability, Spaceship},
-    WinSize,
+    player::{Invulnerability, Point, Spaceship},
+    GameState, WinSize,
 };
 
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<EnemyCount>()
-            .init_resource::<EnemySpawner>()
-            .insert_resource(FixedTime::new(Duration::from_secs(2)))
-            .add_systems(FixedUpdate, spawn_enemy.run_if(is_playing))
+        app.add_systems(OnEnter(GameState::Gameplay), spawn_stage)
             .add_systems(
                 PreUpdate,
                 (out_of_bounds_detection, enemy_collision_detection)
                     .run_if(is_playing)
                     .in_set(EventSet::Spawn),
-            );
+            )
+            .add_systems(PreUpdate, stage_manager.run_if(is_playing));
     }
 }
 
@@ -35,52 +31,100 @@ impl Plugin for EnemyPlugin {
 #[derive(Component, Debug)]
 pub struct Enemy;
 
-#[derive(Resource, Default, Debug)]
+#[derive(Debug)]
+struct SpawnerLocation {
+    center: Point,
+    width: f32,
+    height: f32,
+}
+
+#[derive(Component, Debug)]
+struct EnemySpawner {
+    entity_type: EntityType,
+    spawned: u32,
+    spawn_total: u32,
+    interval: Timer,
+    location: SpawnerLocation,
+}
+
+impl EnemySpawner {
+    fn init_velocity(&self) -> Velocity {
+        match self.entity_type {
+            EntityType::Asteroid => Velocity { x: 0.0, y: -200.0 },
+            _ => Velocity { x: 0.0, y: 0.0 },
+        }
+    }
+
+    fn entity_sprite(&self) -> Sprite {
+        match self.entity_type {
+            EntityType::Asteroid => Sprite {
+                color: Color::rgb(0.5, 0.5, 0.5),
+                custom_size: Some(Vec2::new(70.0, 70.0)),
+                ..default()
+            },
+            _ => Sprite {
+                color: Color::rgb(0.5, 1.0, 0.5),
+                custom_size: Some(Vec2::new(50.0, 50.0)),
+                ..default()
+            },
+        }
+    }
+
+    fn spawn_location(&self) -> Vec3 {
+        let mut rng = thread_rng();
+
+        let w_span_left = self.location.center.x - self.location.width / 2.0;
+        let w_span_right = self.location.center.x + self.location.width / 2.0;
+
+        let h_span_bottom = self.location.center.y - self.location.height / 2.0;
+        let h_span_top = self.location.center.y + self.location.height / 2.0;
+
+        Vec3::new(
+            rng.gen_range(w_span_left..w_span_right),
+            rng.gen_range(h_span_bottom..h_span_top),
+            consts::ENEMY_Z,
+        )
+    }
+}
+
+#[derive(Component, Debug)]
+enum StageState {
+    Spawning(Vec<EnemySpawner>),
+    Cooldown(Timer),
+}
+
+#[derive(Component, Debug)]
+struct StageWave(u32);
+
+#[derive(Component, Debug)]
+struct GameplayStage {
+    wave: StageWave,
+    state: StageState,
+}
+
+#[derive(Component)]
 pub struct EnemyCount {
     pub asteroids: u32,
 }
 
-enum EnemySpawnLocation {
-    Top,
-    // Sides,
-}
+impl EnemyCount {
+    pub fn add_enemy_count(&mut self, entity_type: EntityType, amount: u32) {
+        if matches!(entity_type, EntityType::Asteroid) {
+            self.asteroids += amount;
+        }
+    }
 
-#[derive(Resource)]
-struct EnemySpawner {
-    entity_type: EntityType,
-    location: EnemySpawnLocation,
-}
-
-impl Default for EnemySpawner {
-    fn default() -> Self {
-        Self {
-            entity_type: EntityType::Asteroid,
-            location: EnemySpawnLocation::Top,
+    pub fn remove_enemy_count(&mut self, entity_type: EntityType, amount: u32) {
+        if matches!(entity_type, EntityType::Asteroid) {
+            self.asteroids -= amount;
         }
     }
 }
 
-impl EnemySpawner {
-    fn spawn_location(&self, win_size: &WinSize) -> Vec3 {
-        let mut rng = thread_rng();
-
-        let w_span = win_size.w / 2.0 + consts::SPAWN_MARGIN;
-        let h_span = win_size.h / 2.0 + consts::SPAWN_MARGIN;
-
-        match self.location {
-            EnemySpawnLocation::Top => {
-                let w_span = w_span - consts::SPAWN_MARGIN;
-                Vec3::new(rng.gen_range(-w_span..w_span), h_span, consts::ENEMY_Z)
-            }
-            // EnemySpawnLocation::Sides => {
-            //     Vec3::new(
-            //         if rng.gen_bool(0.5) { w_span } else { -w_span },
-            //         rng.gen_range(-h_span..h_span),
-            //         ENEMY_Z
-            //     )
-            // },
-        }
-    }
+#[derive(Bundle)]
+struct GameplayBundle {
+    stage: GameplayStage,
+    enemy_count: EnemyCount,
 }
 
 #[derive(Bundle)]
@@ -95,31 +139,107 @@ struct EnemyBundle {
 
 // ===
 
-fn spawn_enemy(
-    mut commands: Commands,
-    win_size: Res<WinSize>,
-    enemy_spawner: Res<EnemySpawner>,
-    mut enemy_count: ResMut<EnemyCount>,
-) {
-    let spawn_point = enemy_spawner.spawn_location(&win_size);
-
-    commands.spawn(EnemyBundle {
-        enemy: Enemy,
-        entity_type: enemy_spawner.entity_type,
-        movable: Movable { auto_despawn: true },
-        velocity: Velocity { x: 0.0, y: -200.0 },
-        sprite: SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgb(0.5, 0.5, 0.5),
-                custom_size: Some(Vec2::new(70.0, 70.0)),
-                ..default()
-            },
-            transform: Transform::from_translation(spawn_point),
-            ..default()
+fn spawn_stage(mut commands: Commands) {
+    commands.spawn(GameplayBundle {
+        stage: GameplayStage {
+            wave: StageWave(0),
+            state: StageState::Cooldown(Timer::from_seconds(
+                consts::STAGE_INIT_COOLDOWN,
+                TimerMode::Once,
+            )),
         },
+        enemy_count: EnemyCount { asteroids: 0 },
     });
+}
 
-    enemy_count.asteroids += 1;
+fn stage_manager(
+    mut commands: Commands,
+    time: Res<Time>,
+    win_size: Res<WinSize>,
+    mut query: Query<(&mut GameplayStage, &mut EnemyCount)>,
+) {
+    if let Ok((mut stage, mut enemy_count)) = query.get_single_mut() {
+        match stage.state {
+            StageState::Spawning(ref mut spawners) => {
+                let mut finished_spawners = vec![];
+
+                for (idx, mut spawner) in spawners.iter_mut().enumerate() {
+                    if spawner.spawned >= spawner.spawn_total {
+                        finished_spawners.push(idx);
+                        continue;
+                    }
+
+                    spawner.interval.tick(time.delta());
+
+                    if spawner.interval.finished() {
+                        let velocity = spawner.init_velocity();
+                        let sprite = spawner.entity_sprite();
+                        let spawn = spawner.spawn_location();
+
+                        commands.spawn(EnemyBundle {
+                            enemy: Enemy,
+                            entity_type: spawner.entity_type,
+                            movable: Movable { auto_despawn: true },
+                            velocity,
+                            sprite: SpriteBundle {
+                                sprite,
+                                transform: Transform::from_translation(spawn),
+                                ..default()
+                            },
+                        });
+
+                        spawner.spawned += 1;
+                        enemy_count.add_enemy_count(spawner.entity_type, 1);
+                    }
+                }
+
+                // Remove spawners that have finished
+                for idx in finished_spawners.iter().rev() {
+                    spawners.remove(*idx);
+                }
+
+                // When spawners have finished start cooldown
+                if spawners.is_empty() {
+                    stage.state = StageState::Cooldown(Timer::from_seconds(
+                        consts::STAGE_COOLDOWN,
+                        TimerMode::Once,
+                    ));
+                }
+            }
+            StageState::Cooldown(ref mut timer) => {
+                timer.tick(time.delta());
+
+                if timer.finished() {
+                    stage.wave.0 += 1;
+                    // TODO add variation to different waves
+                    // Different events - asteroid field, saucer invasion, etc.
+                    // Different difficulty levels
+                    // Variation to spawner locations and intervals
+
+                    let spawn_total = 60;
+                    let interval = consts::STAGE_LENGTH / spawn_total as f32;
+                    let spawner_location = SpawnerLocation {
+                        center: Point {
+                            x: 0.0,
+                            y: win_size.h / 2.0 + consts::SPAWN_MARGIN,
+                        },
+                        width: win_size.w - consts::SPAWN_MARGIN * 2.0,
+                        height: 10.0,
+                    };
+
+                    let spawners = vec![EnemySpawner {
+                        entity_type: EntityType::Asteroid,
+                        spawned: 0,
+                        spawn_total,
+                        interval: Timer::from_seconds(interval, TimerMode::Repeating),
+                        location: spawner_location,
+                    }];
+
+                    stage.state = StageState::Spawning(spawners);
+                }
+            }
+        }
+    }
 }
 
 fn enemy_collision_detection(

@@ -34,4 +34,10 @@ pub const ENEMY_Z: f32 = 0.0;
 
 // --- Score ---
 
-pub const SCORE_ADD_ASTEROID: u32 = 2;
+pub const SCORE_ADD_ASTEROID: u32 = 1;
+
+// --- Stage ---
+
+pub const STAGE_INIT_COOLDOWN: f32 = 3.0;
+pub const STAGE_COOLDOWN: f32 = 5.0;
+pub const STAGE_LENGTH: f32 = 30.0;

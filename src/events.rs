@@ -65,13 +65,13 @@ pub enum EventSet {
 fn despawn_entities_handler(
     mut commands: Commands,
     mut despawn_events: EventReader<DespawnEntity>,
-    mut enemy_count: ResMut<EnemyCount>,
+    mut query: Query<&mut EnemyCount>,
 ) {
-    for despawn_ev in despawn_events.iter() {
-        commands.entity(despawn_ev.entity).despawn();
+    if let Ok(mut enemy_count) = query.get_single_mut() {
+        for despawn_ev in despawn_events.iter() {
+            commands.entity(despawn_ev.entity).despawn();
 
-        if matches!(despawn_ev.entity_type, EntityType::Asteroid) {
-            enemy_count.asteroids -= 1;
+            enemy_count.remove_enemy_count(despawn_ev.entity_type, 1);
         }
     }
 }

@@ -92,9 +92,10 @@ struct ProjectileBundle {
     sprite: SpriteBundle,
 }
 
-struct Point {
-    x: f32,
-    y: f32,
+#[derive(Debug)]
+pub struct Point {
+    pub x: f32,
+    pub y: f32,
 }
 
 #[derive(Debug)]
