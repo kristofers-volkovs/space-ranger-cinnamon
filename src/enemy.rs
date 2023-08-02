@@ -48,15 +48,13 @@ struct EnemySpawner {
 }
 
 impl EnemySpawner {
-    fn init_velocity(&self) -> Velocity {
-        match self.entity_type {
+    fn spawn_enemy(&mut self, commands: &mut Commands) {
+        let velocity = match self.entity_type {
             EntityType::Asteroid => Velocity { x: 0.0, y: -200.0 },
             _ => Velocity { x: 0.0, y: 0.0 },
-        }
-    }
+        };
 
-    fn entity_sprite(&self) -> Sprite {
-        match self.entity_type {
+        let sprite = match self.entity_type {
             EntityType::Asteroid => Sprite {
                 color: Color::rgb(0.5, 0.5, 0.5),
                 custom_size: Some(Vec2::new(70.0, 70.0)),
@@ -67,23 +65,70 @@ impl EnemySpawner {
                 custom_size: Some(Vec2::new(50.0, 50.0)),
                 ..default()
             },
-        }
+        };
+
+        let spawn = {
+            let mut rng = thread_rng();
+
+            let w_span_left = self.location.center.x - self.location.width / 2.0;
+            let w_span_right = self.location.center.x + self.location.width / 2.0;
+
+            let h_span_bottom = self.location.center.y - self.location.height / 2.0;
+            let h_span_top = self.location.center.y + self.location.height / 2.0;
+
+            Vec3::new(
+                rng.gen_range(w_span_left..w_span_right),
+                rng.gen_range(h_span_bottom..h_span_top),
+                consts::ENEMY_Z,
+            )
+        };
+
+        commands.spawn(EnemyBundle {
+            enemy: Enemy,
+            entity_type: self.entity_type,
+            movable: Movable { auto_despawn: true },
+            velocity,
+            sprite: SpriteBundle {
+                sprite,
+                transform: Transform::from_translation(spawn),
+                ..default()
+            },
+        });
+        self.spawned += 1;
     }
 
-    fn spawn_location(&self) -> Vec3 {
-        let mut rng = thread_rng();
+    fn create_spawners(
+        wave: &u32,
+        stage_type: &StageType,
+        win_size: &WinSize,
+    ) -> Vec<EnemySpawner> {
+        // TODO add variation to different waves
+        // Different events - asteroid field, saucer invasion, etc.
+        // Different difficulty levels
+        // Variation to spawner locations and intervals
 
-        let w_span_left = self.location.center.x - self.location.width / 2.0;
-        let w_span_right = self.location.center.x + self.location.width / 2.0;
+        if matches!(stage_type, StageType::Normal) {
+            let spawn_total = 20 * wave;
+            let interval = consts::STAGE_LENGTH / spawn_total as f32;
+            let spawner_location = SpawnerLocation {
+                center: Point {
+                    x: 0.0,
+                    y: win_size.h / 2.0 + consts::SPAWN_MARGIN,
+                },
+                width: win_size.w - consts::SPAWN_MARGIN * 2.0,
+                height: 30.0,
+            };
 
-        let h_span_bottom = self.location.center.y - self.location.height / 2.0;
-        let h_span_top = self.location.center.y + self.location.height / 2.0;
-
-        Vec3::new(
-            rng.gen_range(w_span_left..w_span_right),
-            rng.gen_range(h_span_bottom..h_span_top),
-            consts::ENEMY_Z,
-        )
+            vec![EnemySpawner {
+                entity_type: EntityType::Asteroid,
+                spawned: 0,
+                spawn_total,
+                interval: Timer::from_seconds(interval, TimerMode::Repeating),
+                location: spawner_location,
+            }]
+        } else {
+            vec![]
+        }
     }
 }
 
@@ -93,8 +138,38 @@ enum StageState {
     Cooldown(Timer),
 }
 
+#[derive(Debug)]
+enum StageType {
+    Normal,
+    // AsteroidField,
+    // SaucerInvasion,
+}
+
 #[derive(Component, Debug)]
-struct StageWave(u32);
+struct StageWave {
+    wave: u32,
+    stage_type: StageType,
+}
+
+impl StageWave {
+    fn new() -> StageWave {
+        StageWave {
+            wave: 0,
+            stage_type: StageType::Normal,
+        }
+    }
+
+    fn next_wave(&mut self) {
+        self.wave += 1;
+
+        // let mut rng = thread_rng();
+        // if rng.gen_ratio(3, 10) {
+        //     self.stage_type = StageType::AsteroidField;
+        // } else if !matches!(self.stage_type, StageType::Normal) {
+        //     self.stage_type = StageType::Normal;
+        // }
+    }
+}
 
 #[derive(Component, Debug)]
 struct GameplayStage {
@@ -108,6 +183,10 @@ pub struct EnemyCount {
 }
 
 impl EnemyCount {
+    pub fn new() -> EnemyCount {
+        EnemyCount { asteroids: 0 }
+    }
+
     pub fn add_enemy_count(&mut self, entity_type: EntityType, amount: u32) {
         if matches!(entity_type, EntityType::Asteroid) {
             self.asteroids += amount;
@@ -142,13 +221,13 @@ struct EnemyBundle {
 fn spawn_stage(mut commands: Commands) {
     commands.spawn(GameplayBundle {
         stage: GameplayStage {
-            wave: StageWave(0),
+            wave: StageWave::new(),
             state: StageState::Cooldown(Timer::from_seconds(
                 consts::STAGE_INIT_COOLDOWN,
                 TimerMode::Once,
             )),
         },
-        enemy_count: EnemyCount { asteroids: 0 },
+        enemy_count: EnemyCount::new(),
     });
 }
 
@@ -172,23 +251,7 @@ fn stage_manager(
                     spawner.interval.tick(time.delta());
 
                     if spawner.interval.finished() {
-                        let velocity = spawner.init_velocity();
-                        let sprite = spawner.entity_sprite();
-                        let spawn = spawner.spawn_location();
-
-                        commands.spawn(EnemyBundle {
-                            enemy: Enemy,
-                            entity_type: spawner.entity_type,
-                            movable: Movable { auto_despawn: true },
-                            velocity,
-                            sprite: SpriteBundle {
-                                sprite,
-                                transform: Transform::from_translation(spawn),
-                                ..default()
-                            },
-                        });
-
-                        spawner.spawned += 1;
+                        spawner.spawn_enemy(&mut commands);
                         enemy_count.add_enemy_count(spawner.entity_type, 1);
                     }
                 }
@@ -210,31 +273,12 @@ fn stage_manager(
                 timer.tick(time.delta());
 
                 if timer.finished() {
-                    stage.wave.0 += 1;
-                    // TODO add variation to different waves
-                    // Different events - asteroid field, saucer invasion, etc.
-                    // Different difficulty levels
-                    // Variation to spawner locations and intervals
-
-                    let spawn_total = 60;
-                    let interval = consts::STAGE_LENGTH / spawn_total as f32;
-                    let spawner_location = SpawnerLocation {
-                        center: Point {
-                            x: 0.0,
-                            y: win_size.h / 2.0 + consts::SPAWN_MARGIN,
-                        },
-                        width: win_size.w - consts::SPAWN_MARGIN * 2.0,
-                        height: 10.0,
-                    };
-
-                    let spawners = vec![EnemySpawner {
-                        entity_type: EntityType::Asteroid,
-                        spawned: 0,
-                        spawn_total,
-                        interval: Timer::from_seconds(interval, TimerMode::Repeating),
-                        location: spawner_location,
-                    }];
-
+                    stage.wave.next_wave();
+                    let spawners = EnemySpawner::create_spawners(
+                        &stage.wave.wave,
+                        &stage.wave.stage_type,
+                        &win_size,
+                    );
                     stage.state = StageState::Spawning(spawners);
                 }
             }
