@@ -15,7 +15,10 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(InputManagerPlugin::<SpaceshipAction>::default())
-            .add_systems(OnEnter(GameState::Gameplay), spawn_spaceship)
+            .add_systems(
+                OnEnter(GameState::Gameplay),
+                (load_player_asset_dimensions, spawn_spaceship),
+            )
             .add_systems(
                 Update,
                 (
@@ -240,9 +243,21 @@ struct SpaceshipBundle {
     sprite: SpriteBundle,
 }
 
+#[derive(Resource)]
+pub struct PlayerAssets {
+    pub spaceship: Handle<Image>,
+    pub projectile: Handle<Image>,
+}
+
+#[derive(Resource)]
+pub struct PlayerAssetDimensions {
+    pub spaceship: Vec2,
+    pub projectile: Vec2,
+}
+
 // ===
 
-fn spawn_spaceship(mut commands: Commands) {
+fn spawn_spaceship(mut commands: Commands, player_assets: Res<PlayerAssets>) {
     commands.spawn(SpaceshipBundle {
         spaceship: Spaceship,
         entity_type: EntityType::Spaceship,
@@ -255,11 +270,7 @@ fn spawn_spaceship(mut commands: Commands) {
             ..default()
         },
         sprite: SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgb(1., 1., 1.),
-                custom_size: Some(Vec2::new(50.0, 50.0)),
-                ..default()
-            },
+            texture: player_assets.spaceship.clone(),
             transform: Transform::from_xyz(0., consts::PLAYER_POSITION, consts::PLAYER_Z),
             ..default()
         },
@@ -355,6 +366,7 @@ fn spaceship_shoot(
         With<Spaceship>,
     >,
     time: Res<Time>,
+    player_assets: Res<PlayerAssets>,
 ) {
     if let Ok((action_state, tf, mut spaceship_shoot)) = player_query.get_single_mut() {
         if spaceship_shoot.state.is_idle() && action_state.just_pressed(SpaceshipAction::Shoot) {
@@ -379,11 +391,7 @@ fn spaceship_shoot(
                     movable: Movable { auto_despawn: true },
                     source: ProjectileSource::FromSpaceship,
                     sprite: SpriteBundle {
-                        sprite: Sprite {
-                            color: Color::rgb(1.0, 1.0, 0.0),
-                            custom_size: Some(Vec2 { x: 15.0, y: 15.0 }),
-                            ..default()
-                        },
+                        texture: player_assets.projectile.clone(),
                         transform: Transform::from_translation(
                             tf.translation * Vec2::ONE.extend(consts::PLAYER_PROJECTILE_Z),
                         ),
@@ -428,4 +436,27 @@ fn spaceship_invincibility(
             sprite.color.set_a(1.0);
         }
     }
+}
+
+pub fn load_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let assets = PlayerAssets {
+        spaceship: asset_server.load("sprites/spaceship.png"),
+        projectile: asset_server.load("sprites/spaceship-projectile.png"),
+    };
+
+    commands.insert_resource(assets);
+}
+
+pub fn load_player_asset_dimensions(
+    mut commands: Commands,
+    images: Res<Assets<Image>>,
+    player_assets: Res<PlayerAssets>,
+) {
+    let spaceship_size = images.get(&player_assets.spaceship).unwrap().size();
+    let projectile_size = images.get(&player_assets.projectile).unwrap().size();
+
+    commands.insert_resource(PlayerAssetDimensions {
+        spaceship: spaceship_size,
+        projectile: projectile_size,
+    });
 }

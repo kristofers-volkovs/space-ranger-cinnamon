@@ -7,7 +7,7 @@ use crate::{
     events::{DespawnEntity, EventSet, SpaceshipIsHit},
     is_playing,
     movement::{Movable, Velocity},
-    player::{Invulnerability, Point, Spaceship},
+    player::{Invulnerability, PlayerAssetDimensions, Point, Spaceship},
     GameState, WinSize,
 };
 
@@ -290,19 +290,11 @@ fn enemy_collision_detection(
     mut ev_despawn: EventWriter<DespawnEntity>,
     mut ev_spaceship_hit: EventWriter<SpaceshipIsHit>,
     enemy_query: Query<(Entity, &Transform, &Sprite, &EntityType), With<Enemy>>,
-    spaceship_query: Query<
-        (Entity, &Transform, &Sprite),
-        (With<Spaceship>, Without<Invulnerability>),
-    >,
+    spaceship_query: Query<(Entity, &Transform), (With<Spaceship>, Without<Invulnerability>)>,
+    player_asset_dimensions: Res<PlayerAssetDimensions>,
 ) {
-    if let Ok((spaceship_entity, spaceship_tf, spaceship_sprite)) = spaceship_query.get_single() {
+    if let Ok((spaceship_entity, spaceship_tf)) = spaceship_query.get_single() {
         for (enemy_entity, enemy_tf, enemy_sprite, enemy_type) in enemy_query.iter() {
-            let spaceship_size = {
-                match spaceship_sprite.custom_size {
-                    Some(size) => size * spaceship_tf.scale.xy(),
-                    None => panic!("Spaceship sprite has no custom size"),
-                }
-            };
             let enemy_size = {
                 match enemy_sprite.custom_size {
                     Some(size) => size * enemy_tf.scale.xy(),
@@ -312,7 +304,7 @@ fn enemy_collision_detection(
 
             let collision = collide(
                 spaceship_tf.translation,
-                spaceship_size,
+                player_asset_dimensions.spaceship,
                 enemy_tf.translation,
                 enemy_size,
             );

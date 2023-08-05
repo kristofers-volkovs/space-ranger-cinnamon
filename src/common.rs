@@ -3,7 +3,7 @@ use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide, utils:
 use crate::{
     events::{AddScore, AddScoreType, DespawnEntity, EventSet},
     is_playing,
-    player::{Invulnerability, Projectile, ProjectileSource},
+    player::{Invulnerability, PlayerAssetDimensions, Projectile, ProjectileSource},
 };
 
 pub struct CommonPlugin;
@@ -41,10 +41,8 @@ fn projectile_hit_detection(
             Without<Invulnerability>,
         ),
     >,
-    projectile_query: Query<
-        (Entity, &Transform, &Sprite, &ProjectileSource, &EntityType),
-        With<Projectile>,
-    >,
+    projectile_query: Query<(Entity, &Transform, &ProjectileSource, &EntityType), With<Projectile>>,
+    player_asset_dimensions: Res<PlayerAssetDimensions>,
 ) {
     let mut processed_entities: HashSet<Entity> = HashSet::new();
 
@@ -53,7 +51,7 @@ fn projectile_hit_detection(
             continue;
         }
 
-        for (projectile, projectile_tf, projectile_sprite, projectile_source, projectile_type) in
+        for (projectile, projectile_tf, projectile_source, projectile_type) in
             projectile_query.iter()
         {
             if matches!(entity_type, EntityType::Spaceship)
@@ -66,22 +64,16 @@ fn projectile_hit_detection(
                 continue;
             }
 
-            let projectile_size = {
-                match projectile_sprite.custom_size {
-                    Some(size) => size * entity_tf.scale.xy(),
-                    None => panic!("Projectile sprite has no custom size"),
-                }
-            };
             let entity_size = {
                 match entity_sprite.custom_size {
                     Some(size) => size * projectile_tf.scale.xy(),
-                    None => panic!("Entity sprite has no custom size"),
+                    None => player_asset_dimensions.spaceship,
                 }
             };
 
             let collision = collide(
                 projectile_tf.translation,
-                projectile_size,
+                player_asset_dimensions.projectile,
                 entity_tf.translation,
                 entity_size,
             );
