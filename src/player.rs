@@ -452,8 +452,14 @@ pub fn load_player_asset_dimensions(
     images: Res<Assets<Image>>,
     player_assets: Res<PlayerAssets>,
 ) {
-    let spaceship_size = images.get(&player_assets.spaceship).unwrap().size();
-    let projectile_size = images.get(&player_assets.projectile).unwrap().size();
+    let spaceship_size = match images.get(&player_assets.spaceship) {
+        Some(image) => image.size(),
+        None => return,
+    };
+    let projectile_size = match images.get(&player_assets.projectile) {
+        Some(image) => image.size(),
+        None => return,
+    };
 
     commands.insert_resource(PlayerAssetDimensions {
         spaceship: spaceship_size,

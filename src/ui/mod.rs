@@ -1,8 +1,10 @@
 use bevy::{app::AppExit, prelude::*};
 
 use crate::{
-    common::EntityType, despawn_entities, is_playing, player::load_player_assets, GameState,
-    GameplayState,
+    common::EntityType,
+    despawn_entities, is_playing,
+    player::{load_player_asset_dimensions, load_player_assets, PlayerAssetDimensions},
+    GameState, GameplayState,
 };
 
 mod gameplay;
@@ -29,10 +31,14 @@ impl Plugin for UiPlugin {
                 despawn_entities::<mainmenu::MainMenuUi>,
             )
             // === Loading ===
-            .add_systems(OnEnter(GameState::LoadingGame), (load_player_assets,))
+            .add_systems(OnEnter(GameState::LoadingGame), load_player_assets)
             .add_systems(
                 Update,
-                game_to_gameplay.run_if(in_state(GameState::LoadingGame)),
+                (
+                    load_player_asset_dimensions,
+                    game_to_gameplay.run_if(resource_exists::<PlayerAssetDimensions>()),
+                )
+                    .run_if(in_state(GameState::LoadingGame)),
             )
             // === Gameplay ===
             .add_systems(
