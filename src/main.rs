@@ -50,7 +50,6 @@ fn main() {
                             consts::WINDOW_HEIGHT,
                         ),
                         title: "Space Ranger Cinnamon".to_string(),
-                        resizable: false,
                         ..default()
                     }),
                     ..default()

@@ -1,8 +1,8 @@
 // --- Gameplay screen ---
 
-pub const RATIO: f32 = 9.0 / 10.0;
-pub const WINDOW_HEIGHT: f32 = 1000.0;
-pub const WINDOW_WIDTH: f32 = WINDOW_HEIGHT * RATIO;
+pub const WINDOW_HEIGHT: f32 = 240.0 * 3.0;
+pub const WINDOW_WIDTH: f32 = 256.0 * 3.0;
+// pub const RATIO: f32 = WINDOW_WIDTH / WINDOW_HEIGHT;
 
 pub const SPAWN_MARGIN: f32 = 100.0;
 pub const DESPAWN_MARGIN: f32 = 200.0;

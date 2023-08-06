@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowResized};
 
 use crate::{
     common::EntityType,
@@ -6,7 +6,7 @@ use crate::{
     enemy::EnemyCount,
     is_playing,
     player::{Invulnerability, SpaceshipHealth},
-    Stats,
+    Stats, WinSize,
 };
 
 pub struct EventsPlugin;
@@ -30,7 +30,8 @@ impl Plugin for EventsPlugin {
                         .after(EventSet::HandleDespawn),
                 )
                     .run_if(is_playing),
-            );
+            )
+            .add_systems(PreUpdate, window_resize_handler);
     }
 }
 
@@ -109,5 +110,12 @@ fn spaceship_hit_handler(
                 }
             }
         }
+    }
+}
+
+fn window_resize_handler(mut win_size: ResMut<WinSize>, mut ev_resize: EventReader<WindowResized>) {
+    for resize_ev in ev_resize.iter() {
+        win_size.w = resize_ev.width;
+        win_size.h = resize_ev.height;
     }
 }
