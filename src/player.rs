@@ -43,6 +43,12 @@ pub struct SpaceshipHealth(pub u32);
 #[derive(Component, Debug)]
 pub struct Spaceship;
 
+impl Spaceship {
+    pub fn player_position(window_height: f32) -> f32 {
+        -(window_height / 2.0) * (4.0 / 5.0)
+    }
+}
+
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, TypePath)]
 pub enum SpaceshipAction {
     MoveRight,
@@ -257,7 +263,11 @@ pub struct PlayerAssetDimensions {
 
 // ===
 
-fn spawn_spaceship(mut commands: Commands, player_assets: Res<PlayerAssets>) {
+fn spawn_spaceship(
+    mut commands: Commands,
+    player_assets: Res<PlayerAssets>,
+    win_size: Res<WinSize>,
+) {
     commands.spawn(SpaceshipBundle {
         spaceship: Spaceship,
         entity_type: EntityType::Spaceship,
@@ -271,7 +281,11 @@ fn spawn_spaceship(mut commands: Commands, player_assets: Res<PlayerAssets>) {
         },
         sprite: SpriteBundle {
             texture: player_assets.spaceship.clone(),
-            transform: Transform::from_xyz(0., consts::PLAYER_POSITION, consts::PLAYER_Z),
+            transform: Transform::from_xyz(
+                0.,
+                Spaceship::player_position(win_size.h),
+                consts::PLAYER_Z,
+            ),
             ..default()
         },
     });

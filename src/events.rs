@@ -5,7 +5,7 @@ use crate::{
     consts,
     enemy::EnemyCount,
     is_playing,
-    player::{Invulnerability, SpaceshipHealth},
+    player::{Invulnerability, Spaceship, SpaceshipHealth},
     Stats, WinSize,
 };
 
@@ -113,10 +113,18 @@ fn spaceship_hit_handler(
     }
 }
 
-fn window_resize_handler(mut win_size: ResMut<WinSize>, mut ev_resize: EventReader<WindowResized>) {
+fn window_resize_handler(
+    mut win_size: ResMut<WinSize>,
+    mut ev_resize: EventReader<WindowResized>,
+    mut player_query: Query<&mut Transform, With<Spaceship>>,
+) {
     for resize_ev in ev_resize.iter() {
         win_size.h = resize_ev.height;
         win_size.w = resize_ev.height * consts::WINDOW_RATIO;
+    }
 
+    // TODO ship can go outside screen bounds when resizing
+    if let Ok(mut tf) = player_query.get_single_mut() {
+        tf.translation.y = Spaceship::player_position(win_size.h);
     }
 }
