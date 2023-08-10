@@ -115,7 +115,8 @@ fn spaceship_hit_handler(
 
 fn window_resize_handler(mut win_size: ResMut<WinSize>, mut ev_resize: EventReader<WindowResized>) {
     for resize_ev in ev_resize.iter() {
-        win_size.w = resize_ev.width;
         win_size.h = resize_ev.height;
+        win_size.w = resize_ev.height * consts::WINDOW_RATIO;
+
     }
 }
