@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::ScalingMode};
+
+use crate::consts;
 
 pub struct CameraPlugin;
 
@@ -12,5 +14,15 @@ impl Plugin for CameraPlugin {
 struct GameCamera;
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((GameCamera, Camera2dBundle::default()));
+    commands.spawn((
+        GameCamera,
+        Camera2dBundle {
+            projection: OrthographicProjection {
+                // TODO viewport scaling is weird when resizing the window width
+                scaling_mode: ScalingMode::FixedVertical(consts::WINDOW_HEIGHT),
+                ..default()
+            },
+            ..default()
+        },
+    ));
 }
