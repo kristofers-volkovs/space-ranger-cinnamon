@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use crate::{
     common::{Asteroid, AsteroidType, EntityType},
     consts,
-    events::{DespawnEntity, EventSet, SpaceshipIsHit},
+    events::{DespawnEntity, EventSet, SpaceshipIsHit, SpawnEnemy},
     is_playing,
     movement::{Movable, Velocity},
     player::{Invulnerability, PlayerAssetDimensions, Point, Spaceship},
@@ -20,7 +20,7 @@ impl Plugin for EnemyPlugin {
                 PreUpdate,
                 (out_of_bounds_detection, enemy_collision_detection)
                     .run_if(is_playing)
-                    .in_set(EventSet::Spawn),
+                    .in_set(EventSet::CreateEv),
             )
             .add_systems(PreUpdate, stage_manager.run_if(is_playing));
     }
@@ -51,48 +51,20 @@ struct EnemySpawner {
 }
 
 impl EnemySpawner {
-    fn construct_enemy_bundle(&mut self) -> EnemyBundle {
-        let velocity = match self.entity_type {
-            EntityType::Asteroid(asteroid) => asteroid.get_type_velocity(),
-            _ => Velocity { x: 0.0, y: 0.0 },
-        };
+    fn get_enemy_spawn_point(&self) -> Vec3 {
+        let mut rng = thread_rng();
 
-        let sprite = match self.entity_type {
-            EntityType::Asteroid(asteroid) => asteroid.get_type_sprite(),
-            _ => Sprite {
-                color: Color::rgb(0.5, 1.0, 0.5),
-                custom_size: Some(Vec2::new(50.0, 50.0)),
-                ..default()
-            },
-        };
+        let w_span_left = self.location.center.x - self.location.width / 2.0;
+        let w_span_right = self.location.center.x + self.location.width / 2.0;
 
-        let spawn_point = {
-            let mut rng = thread_rng();
+        let h_span_bottom = self.location.center.y - self.location.height / 2.0;
+        let h_span_top = self.location.center.y + self.location.height / 2.0;
 
-            let w_span_left = self.location.center.x - self.location.width / 2.0;
-            let w_span_right = self.location.center.x + self.location.width / 2.0;
-
-            let h_span_bottom = self.location.center.y - self.location.height / 2.0;
-            let h_span_top = self.location.center.y + self.location.height / 2.0;
-
-            Vec3::new(
-                rng.gen_range(w_span_left..w_span_right),
-                rng.gen_range(h_span_bottom..h_span_top),
-                consts::ENEMY_Z,
-            )
-        };
-
-        EnemyBundle {
-            enemy: Enemy,
-            entity_type: self.entity_type,
-            movable: Movable { auto_despawn: true },
-            velocity,
-            sprite: SpriteBundle {
-                sprite,
-                transform: Transform::from_translation(spawn_point),
-                ..default()
-            },
-        }
+        Vec3::new(
+            rng.gen_range(w_span_left..w_span_right),
+            rng.gen_range(h_span_bottom..h_span_top),
+            consts::ENEMY_Z,
+        )
     }
 
     fn add_spawned_count(&mut self, amount: u32) {
@@ -240,6 +212,29 @@ pub struct EnemyBundle {
     sprite: SpriteBundle,
 }
 
+impl EnemyBundle {
+    // implement new method that would initiate all the fields from passed parameters
+    // and return the bundle
+    pub fn new(
+        entity_type: EntityType,
+        velocity: Velocity,
+        sprite: Sprite,
+        spawn_point: Vec3,
+    ) -> Self {
+        EnemyBundle {
+            enemy: Enemy,
+            entity_type,
+            movable: Movable { auto_despawn: true },
+            velocity,
+            sprite: SpriteBundle {
+                sprite,
+                transform: Transform::from_translation(spawn_point),
+                ..default()
+            },
+        }
+    }
+}
+
 // ===
 
 fn spawn_stage(mut commands: Commands) {
@@ -256,7 +251,7 @@ fn spawn_stage(mut commands: Commands) {
 }
 
 fn stage_manager(
-    mut commands: Commands,
+    mut ev_spawn: EventWriter<SpawnEnemy>,
     time: Res<Time>,
     win_size: Res<WinSize>,
     mut query: Query<(&mut GameplayStage, &mut EnemyCount)>,
@@ -275,8 +270,8 @@ fn stage_manager(
                     spawner.interval.tick(time.delta());
 
                     if spawner.interval.finished() {
-                        let enemy_bundle = spawner.construct_enemy_bundle();
-                        commands.spawn(enemy_bundle);
+                        let spawn_point = spawner.get_enemy_spawn_point();
+                        ev_spawn.send(SpawnEnemy::new(spawner.entity_type, spawn_point));
                         spawner.add_spawned_count(1);
                         enemy_count.add_enemy_count(spawner.entity_type, 1);
                     }

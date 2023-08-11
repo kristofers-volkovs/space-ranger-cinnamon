@@ -1,6 +1,7 @@
 use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide, utils::HashSet};
 
 use crate::{
+    enemy::EnemyBundle,
     events::{AddScore, AddScoreType, DespawnEntity, EventSet},
     is_playing,
     movement::Velocity,
@@ -14,7 +15,7 @@ impl Plugin for CommonPlugin {
         app.add_systems(
             PreUpdate,
             projectile_hit_detection
-                .in_set(EventSet::Spawn)
+                .in_set(EventSet::CreateEv)
                 .run_if(is_playing),
         );
     }
@@ -35,16 +36,17 @@ pub struct Asteroid {
 }
 
 impl Asteroid {
-    pub fn get_type_velocity(&self) -> Velocity {
-        match self.asteroid_type {
+    pub fn construct_asteroid_bundle(
+        &self,
+        entity_type: EntityType,
+        spawn_point: Vec3,
+    ) -> EnemyBundle {
+        let velocity = match self.asteroid_type {
             AsteroidType::Small => Velocity { x: 0.0, y: -300.0 },
             AsteroidType::Medium => Velocity { x: 0.0, y: -200.0 },
             AsteroidType::Large => Velocity { x: 0.0, y: -100.0 },
-        }
-    }
-
-    pub fn get_type_sprite(&self) -> Sprite {
-        Sprite {
+        };
+        let sprite = Sprite {
             color: Color::rgb(0.5, 0.5, 0.5),
             custom_size: match self.asteroid_type {
                 AsteroidType::Small => Some(Vec2::new(20.0, 20.0)),
@@ -52,7 +54,9 @@ impl Asteroid {
                 AsteroidType::Large => Some(Vec2::new(70.0, 70.0)),
             },
             ..default()
-        }
+        };
+
+        EnemyBundle::new(entity_type, velocity, sprite, spawn_point)
     }
 }
 

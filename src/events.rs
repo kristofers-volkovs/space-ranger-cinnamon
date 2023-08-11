@@ -16,18 +16,22 @@ impl Plugin for EventsPlugin {
         app.add_event::<DespawnEntity>()
             .add_event::<AddScore>()
             .add_event::<SpaceshipIsHit>()
+            .add_event::<SpawnEnemy>()
             .add_systems(
                 PreUpdate,
                 (
                     spaceship_hit_handler
                         .in_set(EventSet::HandleHit)
-                        .after(EventSet::Spawn),
+                        .after(EventSet::CreateEv),
                     despawn_entities_handler
                         .in_set(EventSet::HandleDespawn)
                         .after(EventSet::HandleHit),
                     add_score_handler
                         .in_set(EventSet::HandleScore)
                         .after(EventSet::HandleDespawn),
+                    spawn_enemies_handler
+                        .in_set(EventSet::HandleSpawn)
+                        .after(EventSet::HandleScore),
                 )
                     .run_if(is_playing),
             )
@@ -53,12 +57,28 @@ pub struct AddScore(pub AddScoreType);
 #[derive(Event)]
 pub struct SpaceshipIsHit(pub Entity);
 
+#[derive(Event)]
+pub struct SpawnEnemy {
+    entity_type: EntityType,
+    spawn_point: Vec3,
+}
+
+impl SpawnEnemy {
+    pub fn new(entity_type: EntityType, spawn_point: Vec3) -> Self {
+        Self {
+            entity_type,
+            spawn_point,
+        }
+    }
+}
+
 #[derive(SystemSet, Clone, Hash, Debug, Eq, PartialEq)]
 pub enum EventSet {
-    Spawn,
+    CreateEv,
     HandleHit,
     HandleDespawn,
     HandleScore,
+    HandleSpawn,
 }
 
 // ===
@@ -131,5 +151,15 @@ fn window_resize_handler(
     // TODO ship can go outside screen bounds when resizing
     if let Ok(mut tf) = player_query.get_single_mut() {
         tf.translation.y = Spaceship::player_position(win_size.h);
+    }
+}
+
+fn spawn_enemies_handler(mut commands: Commands, mut ev_spawn: EventReader<SpawnEnemy>) {
+    for spawn_ev in ev_spawn.iter() {
+        if let EntityType::Asteroid(asteroid) = spawn_ev.entity_type {
+            let asteroid_bundle =
+                asteroid.construct_asteroid_bundle(spawn_ev.entity_type, spawn_ev.spawn_point);
+            commands.spawn(asteroid_bundle);
+        }
     }
 }
