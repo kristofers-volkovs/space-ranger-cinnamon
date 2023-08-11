@@ -81,7 +81,7 @@ fn add_score_handler(mut add_score_events: EventReader<AddScore>, mut stats: Res
     for add_score_ev in add_score_events.iter() {
         match add_score_ev.0 {
             AddScoreType::EnemyDestroyed(entity_type) => {
-                if let EntityType::Asteroid = entity_type {
+                if let EntityType::Asteroid(_) = entity_type {
                     stats.score += consts::SCORE_ADD_ASTEROID;
                 }
             }
@@ -118,6 +118,11 @@ fn window_resize_handler(
     mut ev_resize: EventReader<WindowResized>,
     mut player_query: Query<&mut Transform, With<Spaceship>>,
 ) {
+    // When window is resizing, look after which window dim
+    // is the smaller value, then based on the smallest dim
+    // calculate the other dim using the ratio
+    // That will make the game always visible even when
+    // the one dim is squashed
     for resize_ev in ev_resize.iter() {
         win_size.h = resize_ev.height;
         win_size.w = resize_ev.height * consts::WINDOW_RATIO;

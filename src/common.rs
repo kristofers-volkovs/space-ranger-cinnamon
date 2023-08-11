@@ -21,11 +21,18 @@ impl Plugin for CommonPlugin {
 
 // ===
 
+#[derive(Clone, Copy, Debug)]
+pub enum AsteroidType {
+    Small,
+    Medium,
+    Large,
+}
+
 #[derive(Component, Clone, Copy, Debug)]
 pub enum EntityType {
     Spaceship,
     Projectile,
-    Asteroid,
+    Asteroid(AsteroidType),
 }
 
 // ===

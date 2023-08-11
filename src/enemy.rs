@@ -2,7 +2,7 @@ use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 
 use crate::{
-    common::EntityType,
+    common::{AsteroidType, EntityType},
     consts,
     events::{DespawnEntity, EventSet, SpaceshipIsHit},
     is_playing,
@@ -31,7 +31,7 @@ impl Plugin for EnemyPlugin {
 #[derive(Component, Debug)]
 pub struct Enemy;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct SpawnerLocation {
     center: Point,
     width: f32,
@@ -41,6 +41,9 @@ struct SpawnerLocation {
 #[derive(Component, Debug)]
 struct EnemySpawner {
     entity_type: EntityType,
+    // TODO Each tick a random amount of enemies spawn equaling up to a predetermined total amount
+    // spawn_per_tick: Vec2,
+    // tick: Timer,
     spawned: u32,
     spawn_total: u32,
     interval: Timer,
@@ -50,14 +53,22 @@ struct EnemySpawner {
 impl EnemySpawner {
     fn spawn_enemy(&mut self, commands: &mut Commands) {
         let velocity = match self.entity_type {
-            EntityType::Asteroid => Velocity { x: 0.0, y: -200.0 },
+            EntityType::Asteroid(asteroid_type) => match asteroid_type {
+                AsteroidType::Small => Velocity { x: 0.0, y: -300.0 },
+                AsteroidType::Medium => Velocity { x: 0.0, y: -200.0 },
+                AsteroidType::Large => Velocity { x: 0.0, y: -100.0 },
+            },
             _ => Velocity { x: 0.0, y: 0.0 },
         };
 
         let sprite = match self.entity_type {
-            EntityType::Asteroid => Sprite {
+            EntityType::Asteroid(asteroid_type) => Sprite {
                 color: Color::rgb(0.5, 0.5, 0.5),
-                custom_size: Some(Vec2::new(70.0, 70.0)),
+                custom_size: match asteroid_type {
+                    AsteroidType::Small => Some(Vec2::new(20.0, 20.0)),
+                    AsteroidType::Medium => Some(Vec2::new(40.0, 40.0)),
+                    AsteroidType::Large => Some(Vec2::new(70.0, 70.0)),
+                },
                 ..default()
             },
             _ => Sprite {
@@ -108,7 +119,7 @@ impl EnemySpawner {
         // Variation to spawner locations and intervals
 
         if matches!(stage_type, StageType::Normal) {
-            let spawn_total = 20 * wave;
+            let spawn_total = 10 * wave;
             let interval = consts::STAGE_LENGTH / spawn_total as f32;
             let spawner_location = SpawnerLocation {
                 center: Point {
@@ -119,13 +130,29 @@ impl EnemySpawner {
                 height: 30.0,
             };
 
-            vec![EnemySpawner {
-                entity_type: EntityType::Asteroid,
-                spawned: 0,
-                spawn_total,
-                interval: Timer::from_seconds(interval, TimerMode::Repeating),
-                location: spawner_location,
-            }]
+            vec![
+                EnemySpawner {
+                    entity_type: EntityType::Asteroid(AsteroidType::Small),
+                    spawned: 0,
+                    spawn_total,
+                    interval: Timer::from_seconds(interval, TimerMode::Repeating),
+                    location: spawner_location,
+                },
+                EnemySpawner {
+                    entity_type: EntityType::Asteroid(AsteroidType::Medium),
+                    spawned: 0,
+                    spawn_total,
+                    interval: Timer::from_seconds(interval, TimerMode::Repeating),
+                    location: spawner_location,
+                },
+                EnemySpawner {
+                    entity_type: EntityType::Asteroid(AsteroidType::Large),
+                    spawned: 0,
+                    spawn_total,
+                    interval: Timer::from_seconds(interval, TimerMode::Repeating),
+                    location: spawner_location,
+                },
+            ]
         } else {
             vec![]
         }
@@ -188,13 +215,13 @@ impl EnemyCount {
     }
 
     pub fn add_enemy_count(&mut self, entity_type: EntityType, amount: u32) {
-        if matches!(entity_type, EntityType::Asteroid) {
+        if matches!(entity_type, EntityType::Asteroid(_)) {
             self.asteroids += amount;
         }
     }
 
     pub fn remove_enemy_count(&mut self, entity_type: EntityType, amount: u32) {
-        if matches!(entity_type, EntityType::Asteroid) {
+        if matches!(entity_type, EntityType::Asteroid(_)) {
             self.asteroids -= amount;
         }
     }
