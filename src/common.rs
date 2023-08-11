@@ -3,7 +3,8 @@ use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide, utils:
 use crate::{
     events::{AddScore, AddScoreType, DespawnEntity, EventSet},
     is_playing,
-    player::{Invulnerability, PlayerAssetDimensions, Projectile, ProjectileSource}, movement::Velocity,
+    movement::Velocity,
+    player::{Invulnerability, PlayerAssetDimensions, Projectile, ProjectileSource},
 };
 
 pub struct CommonPlugin;
@@ -28,19 +29,24 @@ pub enum AsteroidType {
     Large,
 }
 
-impl AsteroidType {
-    pub fn get_type_velocity(asteroid_type: AsteroidType) -> Velocity {
-        match asteroid_type {
+#[derive(Clone, Copy, Debug)]
+pub struct Asteroid {
+    pub asteroid_type: AsteroidType,
+}
+
+impl Asteroid {
+    pub fn get_type_velocity(&self) -> Velocity {
+        match self.asteroid_type {
             AsteroidType::Small => Velocity { x: 0.0, y: -300.0 },
             AsteroidType::Medium => Velocity { x: 0.0, y: -200.0 },
             AsteroidType::Large => Velocity { x: 0.0, y: -100.0 },
         }
     }
 
-    pub fn get_type_sprite(asteroid_type: AsteroidType) -> Sprite {
+    pub fn get_type_sprite(&self) -> Sprite {
         Sprite {
             color: Color::rgb(0.5, 0.5, 0.5),
-            custom_size: match asteroid_type {
+            custom_size: match self.asteroid_type {
                 AsteroidType::Small => Some(Vec2::new(20.0, 20.0)),
                 AsteroidType::Medium => Some(Vec2::new(40.0, 40.0)),
                 AsteroidType::Large => Some(Vec2::new(70.0, 70.0)),
@@ -54,7 +60,7 @@ impl AsteroidType {
 pub enum EntityType {
     Spaceship,
     Projectile,
-    Asteroid(AsteroidType),
+    Asteroid(Asteroid),
 }
 
 // ===

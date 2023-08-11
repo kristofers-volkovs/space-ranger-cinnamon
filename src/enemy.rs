@@ -2,7 +2,7 @@ use bevy::{math::Vec3Swizzles, prelude::*, sprite::collide_aabb::collide};
 use rand::{thread_rng, Rng};
 
 use crate::{
-    common::{AsteroidType, EntityType},
+    common::{Asteroid, AsteroidType, EntityType},
     consts,
     events::{DespawnEntity, EventSet, SpaceshipIsHit},
     is_playing,
@@ -53,12 +53,12 @@ struct EnemySpawner {
 impl EnemySpawner {
     fn construct_enemy_bundle(&mut self) -> EnemyBundle {
         let velocity = match self.entity_type {
-            EntityType::Asteroid(asteroid_type) => AsteroidType::get_type_velocity(asteroid_type),
+            EntityType::Asteroid(asteroid) => asteroid.get_type_velocity(),
             _ => Velocity { x: 0.0, y: 0.0 },
         };
 
         let sprite = match self.entity_type {
-            EntityType::Asteroid(asteroid_type) => AsteroidType::get_type_sprite(asteroid_type),
+            EntityType::Asteroid(asteroid) => asteroid.get_type_sprite(),
             _ => Sprite {
                 color: Color::rgb(0.5, 1.0, 0.5),
                 custom_size: Some(Vec2::new(50.0, 50.0)),
@@ -123,21 +123,27 @@ impl EnemySpawner {
 
             vec![
                 EnemySpawner {
-                    entity_type: EntityType::Asteroid(AsteroidType::Small),
+                    entity_type: EntityType::Asteroid(Asteroid {
+                        asteroid_type: AsteroidType::Small,
+                    }),
                     spawned: 0,
                     spawn_total,
                     interval: Timer::from_seconds(interval, TimerMode::Repeating),
                     location: spawner_location,
                 },
                 EnemySpawner {
-                    entity_type: EntityType::Asteroid(AsteroidType::Medium),
+                    entity_type: EntityType::Asteroid(Asteroid {
+                        asteroid_type: AsteroidType::Medium,
+                    }),
                     spawned: 0,
                     spawn_total,
                     interval: Timer::from_seconds(interval, TimerMode::Repeating),
                     location: spawner_location,
                 },
                 EnemySpawner {
-                    entity_type: EntityType::Asteroid(AsteroidType::Large),
+                    entity_type: EntityType::Asteroid(Asteroid {
+                        asteroid_type: AsteroidType::Large,
+                    }),
                     spawned: 0,
                     spawn_total,
                     interval: Timer::from_seconds(interval, TimerMode::Repeating),
