@@ -51,26 +51,14 @@ struct EnemySpawner {
 }
 
 impl EnemySpawner {
-    fn spawn_enemy(&mut self, commands: &mut Commands) {
+    fn construct_enemy_bundle(&mut self) -> EnemyBundle {
         let velocity = match self.entity_type {
-            EntityType::Asteroid(asteroid_type) => match asteroid_type {
-                AsteroidType::Small => Velocity { x: 0.0, y: -300.0 },
-                AsteroidType::Medium => Velocity { x: 0.0, y: -200.0 },
-                AsteroidType::Large => Velocity { x: 0.0, y: -100.0 },
-            },
+            EntityType::Asteroid(asteroid_type) => AsteroidType::get_type_velocity(asteroid_type),
             _ => Velocity { x: 0.0, y: 0.0 },
         };
 
         let sprite = match self.entity_type {
-            EntityType::Asteroid(asteroid_type) => Sprite {
-                color: Color::rgb(0.5, 0.5, 0.5),
-                custom_size: match asteroid_type {
-                    AsteroidType::Small => Some(Vec2::new(20.0, 20.0)),
-                    AsteroidType::Medium => Some(Vec2::new(40.0, 40.0)),
-                    AsteroidType::Large => Some(Vec2::new(70.0, 70.0)),
-                },
-                ..default()
-            },
+            EntityType::Asteroid(asteroid_type) => AsteroidType::get_type_sprite(asteroid_type),
             _ => Sprite {
                 color: Color::rgb(0.5, 1.0, 0.5),
                 custom_size: Some(Vec2::new(50.0, 50.0)),
@@ -78,7 +66,7 @@ impl EnemySpawner {
             },
         };
 
-        let spawn = {
+        let spawn_point = {
             let mut rng = thread_rng();
 
             let w_span_left = self.location.center.x - self.location.width / 2.0;
@@ -94,18 +82,21 @@ impl EnemySpawner {
             )
         };
 
-        commands.spawn(EnemyBundle {
+        EnemyBundle {
             enemy: Enemy,
             entity_type: self.entity_type,
             movable: Movable { auto_despawn: true },
             velocity,
             sprite: SpriteBundle {
                 sprite,
-                transform: Transform::from_translation(spawn),
+                transform: Transform::from_translation(spawn_point),
                 ..default()
             },
-        });
-        self.spawned += 1;
+        }
+    }
+
+    fn add_spawned_count(&mut self, amount: u32) {
+        self.spawned += amount;
     }
 
     fn create_spawners(
@@ -234,7 +225,7 @@ struct GameplayBundle {
 }
 
 #[derive(Bundle)]
-struct EnemyBundle {
+pub struct EnemyBundle {
     enemy: Enemy,
     entity_type: EntityType,
     movable: Movable,
@@ -278,7 +269,9 @@ fn stage_manager(
                     spawner.interval.tick(time.delta());
 
                     if spawner.interval.finished() {
-                        spawner.spawn_enemy(&mut commands);
+                        let enemy_bundle = spawner.construct_enemy_bundle();
+                        commands.spawn(enemy_bundle);
+                        spawner.add_spawned_count(1);
                         enemy_count.add_enemy_count(spawner.entity_type, 1);
                     }
                 }
