@@ -5,6 +5,7 @@ use crate::{
     consts,
     enemy::EnemyCount,
     is_playing,
+    movement::Velocity,
     player::{Invulnerability, Spaceship, SpaceshipHealth},
     Stats, WinSize,
 };
@@ -60,13 +61,15 @@ pub struct SpaceshipIsHit(pub Entity);
 #[derive(Event)]
 pub struct SpawnEnemy {
     entity_type: EntityType,
+    initial_velocity: Velocity,
     spawn_point: Vec3,
 }
 
 impl SpawnEnemy {
-    pub fn new(entity_type: EntityType, spawn_point: Vec3) -> Self {
+    pub fn new(entity_type: EntityType, initial_velocity: Velocity, spawn_point: Vec3) -> Self {
         Self {
             entity_type,
+            initial_velocity,
             spawn_point,
         }
     }
@@ -154,12 +157,22 @@ fn window_resize_handler(
     }
 }
 
-fn spawn_enemies_handler(mut commands: Commands, mut ev_spawn: EventReader<SpawnEnemy>) {
-    for spawn_ev in ev_spawn.iter() {
-        if let EntityType::Asteroid(asteroid) = spawn_ev.entity_type {
-            let asteroid_bundle =
-                asteroid.construct_asteroid_bundle(spawn_ev.entity_type, spawn_ev.spawn_point);
-            commands.spawn(asteroid_bundle);
+fn spawn_enemies_handler(
+    mut commands: Commands,
+    mut ev_spawn: EventReader<SpawnEnemy>,
+    mut query: Query<&mut EnemyCount>,
+) {
+    if let Ok(mut enemy_count) = query.get_single_mut() {
+        for spawn_ev in ev_spawn.iter() {
+            if let EntityType::Asteroid(asteroid) = spawn_ev.entity_type {
+                let asteroid_bundle = asteroid.construct_asteroid_bundle(
+                    spawn_ev.entity_type,
+                    spawn_ev.initial_velocity,
+                    spawn_ev.spawn_point,
+                );
+                commands.spawn(asteroid_bundle);
+                enemy_count.add_enemy_count(spawn_ev.entity_type, 1);
+            }
         }
     }
 }

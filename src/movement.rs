@@ -27,15 +27,15 @@ pub struct Movable {
     pub auto_despawn: bool,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct Velocity {
     pub x: f32,
     pub y: f32,
 }
 
 impl Velocity {
-    pub fn new() -> Velocity {
-        Velocity { x: 0., y: 0. }
+    pub fn new(x: f32, y: f32) -> Self {
+        Velocity { x, y }
     }
 }
 

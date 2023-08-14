@@ -32,7 +32,7 @@ impl Plugin for EnemyPlugin {
 pub struct Enemy;
 
 #[derive(Debug, Copy, Clone)]
-struct SpawnerLocation {
+struct SpawnerArea {
     center: Point,
     width: f32,
     height: f32,
@@ -47,24 +47,36 @@ struct EnemySpawner {
     spawned: u32,
     spawn_total: u32,
     interval: Timer,
-    location: SpawnerLocation,
+    area: SpawnerArea,
 }
 
 impl EnemySpawner {
     fn get_enemy_spawn_point(&self) -> Vec3 {
         let mut rng = thread_rng();
 
-        let w_span_left = self.location.center.x - self.location.width / 2.0;
-        let w_span_right = self.location.center.x + self.location.width / 2.0;
+        let w_span_left = self.area.center.x - self.area.width / 2.0;
+        let w_span_right = self.area.center.x + self.area.width / 2.0;
 
-        let h_span_bottom = self.location.center.y - self.location.height / 2.0;
-        let h_span_top = self.location.center.y + self.location.height / 2.0;
+        let h_span_bottom = self.area.center.y - self.area.height / 2.0;
+        let h_span_top = self.area.center.y + self.area.height / 2.0;
 
         Vec3::new(
             rng.gen_range(w_span_left..w_span_right),
             rng.gen_range(h_span_bottom..h_span_top),
             consts::ENEMY_Z,
         )
+    }
+
+    fn get_enemy_initial_velocity(&self) -> Velocity {
+        if let EntityType::Asteroid(asteroid) = self.entity_type {
+            match asteroid.asteroid_type {
+                AsteroidType::Small => Velocity::new(0.0, -300.0),
+                AsteroidType::Medium => Velocity::new(0.0, -200.0),
+                AsteroidType::Large => Velocity::new(0.0, -100.0),
+            }
+        } else {
+            Velocity { x: 0.0, y: 0.0 }
+        }
     }
 
     fn add_spawned_count(&mut self, amount: u32) {
@@ -84,7 +96,7 @@ impl EnemySpawner {
         if matches!(stage_type, StageType::Normal) {
             let spawn_total = 10 * wave;
             let interval = consts::STAGE_LENGTH / spawn_total as f32;
-            let spawner_location = SpawnerLocation {
+            let spawner_location = SpawnerArea {
                 center: Point {
                     x: 0.0,
                     y: win_size.h / 2.0 + consts::SPAWN_MARGIN,
@@ -101,7 +113,7 @@ impl EnemySpawner {
                     spawned: 0,
                     spawn_total,
                     interval: Timer::from_seconds(interval, TimerMode::Repeating),
-                    location: spawner_location,
+                    area: spawner_location,
                 },
                 EnemySpawner {
                     entity_type: EntityType::Asteroid(Asteroid {
@@ -110,7 +122,7 @@ impl EnemySpawner {
                     spawned: 0,
                     spawn_total,
                     interval: Timer::from_seconds(interval, TimerMode::Repeating),
-                    location: spawner_location,
+                    area: spawner_location,
                 },
                 EnemySpawner {
                     entity_type: EntityType::Asteroid(Asteroid {
@@ -119,7 +131,7 @@ impl EnemySpawner {
                     spawned: 0,
                     spawn_total,
                     interval: Timer::from_seconds(interval, TimerMode::Repeating),
-                    location: spawner_location,
+                    area: spawner_location,
                 },
             ]
         } else {
@@ -254,9 +266,9 @@ fn stage_manager(
     mut ev_spawn: EventWriter<SpawnEnemy>,
     time: Res<Time>,
     win_size: Res<WinSize>,
-    mut query: Query<(&mut GameplayStage, &mut EnemyCount)>,
+    mut query: Query<&mut GameplayStage>,
 ) {
-    if let Ok((mut stage, mut enemy_count)) = query.get_single_mut() {
+    if let Ok(mut stage) = query.get_single_mut() {
         match stage.state {
             StageState::Spawning(ref mut spawners) => {
                 let mut finished_spawners = vec![];
@@ -271,9 +283,14 @@ fn stage_manager(
 
                     if spawner.interval.finished() {
                         let spawn_point = spawner.get_enemy_spawn_point();
-                        ev_spawn.send(SpawnEnemy::new(spawner.entity_type, spawn_point));
+                        let initial_velocity = spawner.get_enemy_initial_velocity();
+
+                        ev_spawn.send(SpawnEnemy::new(
+                            spawner.entity_type,
+                            initial_velocity,
+                            spawn_point,
+                        ));
                         spawner.add_spawned_count(1);
-                        enemy_count.add_enemy_count(spawner.entity_type, 1);
                     }
                 }
 

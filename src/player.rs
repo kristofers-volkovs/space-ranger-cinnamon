@@ -272,7 +272,7 @@ fn spawn_spaceship(
         spaceship: Spaceship,
         entity_type: EntityType::Spaceship,
         health: SpaceshipHealth(consts::PLAYER_MAX_HEALTH),
-        velocity: Velocity::new(),
+        velocity: Velocity::new(0.0, 0.0),
         dash: SpaceshipDash::new(),
         shooting: SpaceshipShoot::new(),
         input_manager: InputManagerBundle {
