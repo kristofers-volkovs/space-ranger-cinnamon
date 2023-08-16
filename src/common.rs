@@ -6,8 +6,8 @@ use crate::{
     enemy::EnemyBundle,
     events::{AddScore, AddScoreType, DespawnEntity, EventSet, SpawnEnemy},
     is_playing,
-    movement::Velocity,
-    player::{Invulnerability, PlayerAssetDimensions, Projectile, ProjectileSource},
+    movement::{Movable, Velocity},
+    player::{Invulnerability, PlayerAssetDimensions},
 };
 
 pub struct CommonPlugin;
@@ -63,6 +63,49 @@ pub enum EntityType {
     Spaceship,
     Projectile,
     Asteroid(Asteroid),
+}
+
+#[derive(Component, Debug)]
+pub struct Projectile;
+
+#[derive(Component, Debug)]
+pub enum ProjectileSource {
+    FromSpaceship,
+    // FromEnemy,
+}
+
+#[derive(Bundle)]
+pub struct ProjectileBundle {
+    projectile: Projectile,
+    entity_type: EntityType,
+    velocity: Velocity,
+    movable: Movable,
+    source: ProjectileSource,
+    #[bundle()]
+    sprite: SpriteBundle,
+}
+
+impl ProjectileBundle {
+    pub fn new(
+        entity_type: EntityType,
+        velocity: Velocity,
+        spawn_point: Vec3,
+        texture: Handle<Image>,
+        source: ProjectileSource,
+    ) -> Self {
+        Self {
+            projectile: Projectile,
+            entity_type,
+            velocity,
+            movable: Movable::new(true),
+            source,
+            sprite: SpriteBundle {
+                texture,
+                transform: Transform::from_translation(spawn_point),
+                ..default()
+            },
+        }
+    }
 }
 
 // ===

@@ -27,6 +27,12 @@ pub struct Movable {
     pub auto_despawn: bool,
 }
 
+impl Movable {
+    pub fn new(auto_despawn: bool) -> Self {
+        Movable { auto_despawn }
+    }
+}
+
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Velocity {
     pub x: f32,

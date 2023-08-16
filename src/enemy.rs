@@ -236,7 +236,7 @@ impl EnemyBundle {
         EnemyBundle {
             enemy: Enemy,
             entity_type,
-            movable: Movable { auto_despawn: true },
+            movable: Movable::new(true),
             velocity,
             sprite: SpriteBundle {
                 sprite,
