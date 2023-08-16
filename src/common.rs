@@ -62,6 +62,7 @@ impl Asteroid {
 pub enum EntityType {
     Spaceship,
     Projectile,
+    ChargedShot,
     Asteroid(Asteroid),
 }
 
