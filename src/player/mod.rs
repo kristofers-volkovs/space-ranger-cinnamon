@@ -23,7 +23,11 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 (
-                    (shoot::spaceship_shoot, spaceship_invincibility),
+                    (
+                        shoot::spaceship_shoot,
+                        shoot::charged_shot_hit_detection,
+                        spaceship_invincibility,
+                    ),
                     movement::spaceship_movement
                         .in_set(MovementSet::UpdateVelocity)
                         .after(EventSet::HandleDespawn),

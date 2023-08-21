@@ -1,7 +1,8 @@
 use bevy::{prelude::*, window::WindowResized};
+use rand::{thread_rng, Rng};
 
 use crate::{
-    common::EntityType,
+    common::{Asteroid, AsteroidType, EntityType},
     consts,
     enemy::EnemyCount,
     is_playing,
@@ -18,6 +19,7 @@ impl Plugin for EventsPlugin {
             .add_event::<AddScore>()
             .add_event::<SpaceshipIsHit>()
             .add_event::<SpawnEnemy>()
+            .add_event::<SplitAsteroid>()
             .add_systems(
                 PreUpdate,
                 (
@@ -29,6 +31,9 @@ impl Plugin for EventsPlugin {
                         .after(EventSet::HandleHit),
                     add_score_handler
                         .in_set(EventSet::HandleScore)
+                        .after(EventSet::HandleDespawn),
+                    split_asteroid_handler
+                        .in_set(EventSet::HandleAsteroidSplit)
                         .after(EventSet::HandleDespawn),
                     spawn_enemies_handler
                         .in_set(EventSet::HandleSpawn)
@@ -59,6 +64,25 @@ pub struct AddScore(pub AddScoreType);
 pub struct SpaceshipIsHit(pub Entity);
 
 #[derive(Event)]
+pub struct SplitAsteroid {
+    translation: Vec3,
+    size: Vec2,
+    velocity: Velocity,
+    asteroid: Asteroid,
+}
+
+impl SplitAsteroid {
+    pub fn new(translation: Vec3, size: Vec2, velocity: Velocity, asteroid: Asteroid) -> Self {
+        SplitAsteroid {
+            translation,
+            size,
+            velocity,
+            asteroid,
+        }
+    }
+}
+
+#[derive(Event)]
 pub struct SpawnEnemy {
     entity_type: EntityType,
     initial_velocity: Velocity,
@@ -81,6 +105,7 @@ pub enum EventSet {
     HandleHit,
     HandleDespawn,
     HandleScore,
+    HandleAsteroidSplit,
     HandleSpawn,
 }
 
@@ -88,11 +113,11 @@ pub enum EventSet {
 
 fn despawn_entities_handler(
     mut commands: Commands,
-    mut despawn_events: EventReader<DespawnEntity>,
+    mut ev_despawn: EventReader<DespawnEntity>,
     mut query: Query<&mut EnemyCount>,
 ) {
     if let Ok(mut enemy_count) = query.get_single_mut() {
-        for despawn_ev in despawn_events.iter() {
+        for despawn_ev in ev_despawn.iter() {
             commands.entity(despawn_ev.entity).despawn();
 
             enemy_count.remove_enemy_count(despawn_ev.entity_type, 1);
@@ -114,12 +139,12 @@ fn add_score_handler(mut add_score_events: EventReader<AddScore>, mut stats: Res
 
 fn spaceship_hit_handler(
     mut commands: Commands,
-    mut hit_event: EventReader<SpaceshipIsHit>,
+    mut ev_hit: EventReader<SpaceshipIsHit>,
     mut ev_despawn: EventWriter<DespawnEntity>,
     mut spaceship_query: Query<&mut SpaceshipHealth>,
 ) {
     if let Ok(mut health) = spaceship_query.get_single_mut() {
-        if let Some(hit_ev) = hit_event.iter().next() {
+        if let Some(hit_ev) = ev_hit.iter().next() {
             if health.0 > 0 {
                 health.0 -= 1;
 
@@ -154,6 +179,54 @@ fn window_resize_handler(
     // TODO ship can go outside screen bounds when resizing
     if let Ok(mut tf) = player_query.get_single_mut() {
         tf.translation.y = Spaceship::player_position(win_size.h);
+    }
+}
+
+fn split_asteroid_handler(
+    mut ev_spawn: EventWriter<SpawnEnemy>,
+    mut ev_asteroid_split: EventReader<SplitAsteroid>,
+) {
+    for asteroid_split_ev in ev_asteroid_split.iter() {
+        let asteroid = asteroid_split_ev.asteroid;
+        let translation = asteroid_split_ev.translation;
+        let velocity = asteroid_split_ev.velocity;
+        let size = asteroid_split_ev.size;
+
+        let mut rng = thread_rng();
+        let entity_x = translation.x;
+        let entity_y = translation.y;
+
+        let w_span_left = entity_x - size.x / 2.0;
+        let w_span_right = entity_x + size.x / 2.0;
+
+        let h_span_bottom = entity_y - size.y / 2.0;
+        let h_span_top = entity_y + size.y / 2.0;
+
+        let asteroid_amount = rng.gen_range(0..2);
+        for _ in 0..=asteroid_amount {
+            let spawn_point = Vec3::new(
+                rng.gen_range(w_span_left..w_span_right),
+                rng.gen_range(h_span_bottom..h_span_top),
+                consts::ENEMY_Z,
+            );
+
+            let asteroid_type = if let AsteroidType::Large = asteroid.asteroid_type {
+                match rng.gen_bool(0.7) {
+                    true => AsteroidType::Medium,
+                    false => AsteroidType::Small,
+                }
+            } else {
+                AsteroidType::Small
+            };
+
+            let initial_velocity = Velocity::new(rng.gen_range(-60.0..60.0), velocity.y);
+
+            ev_spawn.send(SpawnEnemy::new(
+                EntityType::Asteroid(Asteroid { asteroid_type }),
+                initial_velocity,
+                spawn_point,
+            ));
+        }
     }
 }
 

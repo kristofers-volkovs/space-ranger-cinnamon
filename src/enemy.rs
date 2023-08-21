@@ -333,11 +333,9 @@ fn enemy_collision_detection(
 ) {
     if let Ok((spaceship_entity, spaceship_tf)) = spaceship_query.get_single() {
         for (enemy_entity, enemy_tf, enemy_sprite, enemy_type) in enemy_query.iter() {
-            let enemy_size = {
-                match enemy_sprite.custom_size {
-                    Some(size) => size * enemy_tf.scale.xy(),
-                    None => panic!("Enemy sprite has no custom size"),
-                }
+            let enemy_size = match enemy_sprite.custom_size {
+                Some(size) => size * enemy_tf.scale.xy(),
+                None => panic!("Enemy sprite has no custom size"),
             };
 
             let collision = collide(
