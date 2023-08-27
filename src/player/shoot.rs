@@ -223,7 +223,6 @@ pub fn charged_shot_hit_detection(
                         ));
                     }
                 }
-
             }
         }
 

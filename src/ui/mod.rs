@@ -2,7 +2,7 @@ use bevy::{app::AppExit, prelude::*};
 
 use crate::{
     common::EntityType,
-    despawn_entities, is_playing,
+    despawn_entities, is_gameplay, is_playing,
     player::{load_player_asset_dimensions, load_player_assets, PlayerAssetDimensions},
     GameState, GameplayState,
 };
@@ -50,8 +50,11 @@ impl Plugin for UiPlugin {
             )
             .add_systems(
                 Update,
+                gameplay::spaceship_health_update.run_if(is_gameplay),
+            )
+            .add_systems(
+                Update,
                 (
-                    gameplay::spaceship_health_update,
                     gameplay::update_gameplay_watch,
                     gameplay::update_gameplay_score,
                     pause_gameplay

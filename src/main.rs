@@ -23,10 +23,15 @@ pub enum GameplayState {
     #[default]
     Playing,
     Paused,
+    GameOver,
 }
 
 pub fn is_playing(game: Res<State<GameState>>, gameplay: Res<State<GameplayState>>) -> bool {
     matches!(game.get(), GameState::Gameplay) && matches!(gameplay.get(), GameplayState::Playing)
+}
+
+pub fn is_gameplay(game: Res<State<GameState>>) -> bool {
+    matches!(game.get(), GameState::Gameplay)
 }
 
 fn main() {

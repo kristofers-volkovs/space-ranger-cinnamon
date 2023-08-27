@@ -8,7 +8,7 @@ use crate::{
     is_playing,
     movement::Velocity,
     player::{Invulnerability, Spaceship, SpaceshipHealth},
-    Stats, WinSize,
+    GameplayState, Stats, WinSize,
 };
 
 pub struct EventsPlugin;
@@ -140,7 +140,6 @@ fn add_score_handler(mut add_score_events: EventReader<AddScore>, mut stats: Res
 fn spaceship_hit_handler(
     mut commands: Commands,
     mut ev_hit: EventReader<SpaceshipIsHit>,
-    mut ev_despawn: EventWriter<DespawnEntity>,
     mut spaceship_query: Query<&mut SpaceshipHealth>,
 ) {
     if let Ok(mut health) = spaceship_query.get_single_mut() {
@@ -149,10 +148,7 @@ fn spaceship_hit_handler(
                 health.0 -= 1;
 
                 if health.0 == 0 {
-                    ev_despawn.send(DespawnEntity {
-                        entity: hit_ev.0,
-                        entity_type: EntityType::Spaceship,
-                    });
+                    commands.insert_resource(NextState(Some(GameplayState::GameOver)));
                 } else {
                     commands.entity(hit_ev.0).insert(Invulnerability::new());
                 }
