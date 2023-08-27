@@ -2,11 +2,14 @@ use bevy::{app::AppExit, prelude::*};
 
 use crate::{
     common::EntityType,
-    despawn_entities, is_gameplay, is_playing,
+    despawn_entities,
+    enemy::Gameplay,
+    is_gameplay, is_playing,
     player::{load_player_asset_dimensions, load_player_assets, PlayerAssetDimensions},
     GameState, GameplayState,
 };
 
+mod game_over;
 mod gameplay;
 mod mainmenu;
 mod pause;
@@ -21,7 +24,7 @@ impl Plugin for UiPlugin {
             .add_systems(
                 Update,
                 (
-                    (game_to_loading_assets, unpause_gameplay)
+                    (game_to_loading_assets, gameplay_playing)
                         .run_if(clicked_btn::<mainmenu::MainMenuPlayBtn>),
                     exit_app.run_if(clicked_btn::<mainmenu::MainMenuExitBtn>),
                 ),
@@ -57,7 +60,7 @@ impl Plugin for UiPlugin {
                 (
                     gameplay::update_gameplay_watch,
                     gameplay::update_gameplay_score,
-                    pause_gameplay
+                    gameplay_pause
                         .run_if(clicked_btn::<gameplay::GameplayPauseBtn>.or_else(pressed_esc)),
                 )
                     .run_if(is_playing),
@@ -67,6 +70,7 @@ impl Plugin for UiPlugin {
                 (
                     despawn_entities::<gameplay::GameplayUi>,
                     despawn_entities::<pause::MenuPause>,
+                    despawn_entities::<game_over::MenuGameOver>,
                     despawn_entities::<EntityType>,
                     despawn_entities::<Gameplay>,
                     gameplay::reset_gameplay_stats,
@@ -77,7 +81,7 @@ impl Plugin for UiPlugin {
             .add_systems(
                 Update,
                 (
-                    unpause_gameplay
+                    gameplay_playing
                         .run_if(clicked_btn::<pause::MenuCloseBtn>.or_else(pressed_esc)),
                     game_to_main_menu.run_if(clicked_btn::<pause::MenuExitBtn>),
                 ),
@@ -85,15 +89,32 @@ impl Plugin for UiPlugin {
             .add_systems(
                 OnExit(GameplayState::Paused),
                 despawn_entities::<pause::MenuPause>,
+            )
+            // === Game Over ===
+            .add_systems(
+                OnEnter(GameplayState::GameOver),
+                game_over::setup_game_over_menu,
+            )
+            .add_systems(
+                Update,
+                (
+                    game_to_main_menu.run_if(clicked_btn::<game_over::MenuQuitBtn>),
+                    (
+                        gameplay::reset_gameplay_stats,
+                        gameplay_playing,
+                        game_to_loading_assets,
+                    )
+                        .run_if(clicked_btn::<game_over::MenuPlayAgainBtn>),
+                ),
             );
     }
 }
 
-fn pause_gameplay(mut commands: Commands) {
+fn gameplay_pause(mut commands: Commands) {
     commands.insert_resource(NextState(Some(GameplayState::Paused)));
 }
 
-fn unpause_gameplay(mut commands: Commands) {
+fn gameplay_playing(mut commands: Commands) {
     commands.insert_resource(NextState(Some(GameplayState::Playing)));
 }
 
