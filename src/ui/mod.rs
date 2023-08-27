@@ -68,6 +68,7 @@ impl Plugin for UiPlugin {
                     despawn_entities::<gameplay::GameplayUi>,
                     despawn_entities::<pause::MenuPause>,
                     despawn_entities::<EntityType>,
+                    despawn_entities::<Gameplay>,
                     gameplay::reset_gameplay_stats,
                 ),
             )

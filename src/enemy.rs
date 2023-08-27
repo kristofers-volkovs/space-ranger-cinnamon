@@ -28,6 +28,9 @@ impl Plugin for EnemyPlugin {
 
 // ===
 
+#[derive(Component)]
+pub struct Gameplay;
+
 #[derive(Component, Debug)]
 pub struct Enemy;
 
@@ -210,6 +213,7 @@ impl EnemyCount {
 
 #[derive(Bundle)]
 struct GameplayBundle {
+    gameplay: Gameplay,
     stage: GameplayStage,
     enemy_count: EnemyCount,
 }
@@ -251,6 +255,7 @@ impl EnemyBundle {
 
 fn spawn_stage(mut commands: Commands) {
     commands.spawn(GameplayBundle {
+        gameplay: Gameplay,
         stage: GameplayStage {
             wave: StageWave::new(),
             state: StageState::Cooldown(Timer::from_seconds(
