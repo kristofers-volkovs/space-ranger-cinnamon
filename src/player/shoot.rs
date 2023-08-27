@@ -224,11 +224,12 @@ pub fn charged_shot_hit_detection(
                     }
                 }
 
-                ev_despawn.send(DespawnEntity {
-                    entity: charged_shot_entity,
-                    entity_type: EntityType::ChargedShot,
-                });
             }
         }
+
+        ev_despawn.send(DespawnEntity {
+            entity: charged_shot_entity,
+            entity_type: EntityType::ChargedShot,
+        });
     }
 }
