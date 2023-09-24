@@ -214,9 +214,9 @@ fn spaceship_invincibility(
 
 pub fn load_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let assets = PlayerHandles {
-        spaceship: asset_server.load("sprites/spaceship.png"),
-        projectile: asset_server.load("sprites/spaceship-projectile.png"),
-        propulsion: asset_server.load("aseprites/spaceship-propulsion.aseprite"),
+        spaceship: asset_server.load(consts::PLAYER_SPRITE_SPACESHIP),
+        projectile: asset_server.load(consts::PLAYER_SPRITE_PROJECTILE),
+        propulsion: asset_server.load(consts::PLAYER_ASEPRITE_PROPULSION),
     };
 
     commands.insert_resource(assets);

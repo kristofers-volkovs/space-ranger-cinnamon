@@ -34,6 +34,10 @@ pub const PLAYER_PROPULSION_Z: f32 = 11.0;
 pub const PLAYER_PROJECTILE_Z: f32 = 1.0;
 pub const PLAYER_CHARGE_SHOT_Z: f32 = 2.0;
 
+pub const PLAYER_SPRITE_SPACESHIP: &str = "sprites/spaceship.png";
+pub const PLAYER_SPRITE_PROJECTILE: &str = "sprites/spaceship-projectile.png";
+pub const PLAYER_ASEPRITE_PROPULSION: &str = "aseprites/spaceship-propulsion.aseprite";
+
 // --- Enemy ---
 
 pub const ENEMY_Z: f32 = 0.0;
