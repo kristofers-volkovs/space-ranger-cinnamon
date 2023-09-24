@@ -6,7 +6,7 @@ use crate::{
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::ActionState;
 
-use super::{Point, Spaceship, SpaceshipAction};
+use super::{Point, Spaceship, SpaceshipAction, SpaceshipPropulsion};
 
 #[derive(Debug)]
 pub struct Dash {
@@ -174,5 +174,16 @@ pub fn apply_spaceship_velocity(
         }
 
         tf.translation.x += velocity.x * time.delta_seconds();
+    }
+}
+
+pub fn set_propulsion_position(
+    mut player_query: Query<&mut Transform, With<Spaceship>>,
+    mut propulsion_query: Query<&mut Transform, (With<SpaceshipPropulsion>, Without<Spaceship>)>,
+) {
+    if let Ok(mut tf_propulsion) = propulsion_query.get_single_mut() {
+        if let Ok(tf_player) = player_query.get_single_mut() {
+            tf_propulsion.translation.x = tf_player.translation.x;
+        }
     }
 }

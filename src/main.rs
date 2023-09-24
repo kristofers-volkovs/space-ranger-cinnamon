@@ -1,4 +1,5 @@
 use bevy::{prelude::*, time::Stopwatch, window::WindowResolution};
+use bevy_mod_aseprite::AsepritePlugin;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod camera;
@@ -67,6 +68,7 @@ fn main() {
             ui::UiPlugin,
             events::EventsPlugin,
         ))
+        .add_plugins(AsepritePlugin)
         // .add_plugins(WorldInspectorPlugin::new())
         .run();
 }

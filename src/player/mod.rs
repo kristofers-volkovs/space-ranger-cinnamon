@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::reflect::TypePath;
+use bevy_mod_aseprite::{Aseprite, AsepriteAnimation, AsepriteBundle};
 use leafwing_input_manager::prelude::*;
 
 use crate::common::EntityType;
@@ -34,6 +35,7 @@ impl Plugin for PlayerPlugin {
                     movement::apply_spaceship_velocity
                         .in_set(MovementSet::ApplyVelocity)
                         .after(MovementSet::UpdateVelocity),
+                    movement::set_propulsion_position.after(MovementSet::ApplyVelocity),
                 )
                     .run_if(is_playing),
             );
@@ -53,6 +55,9 @@ impl Spaceship {
         -(window_height / 2.0) * (4.0 / 5.0)
     }
 }
+
+#[derive(Component, Debug)]
+pub struct SpaceshipPropulsion;
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, TypePath)]
 pub enum SpaceshipAction {
@@ -114,10 +119,18 @@ struct SpaceshipBundle {
     sprite: SpriteBundle,
 }
 
+#[derive(Bundle)]
+struct SpaceshipPropulsionBundle {
+    spaceship_propulsion: SpaceshipPropulsion,
+    #[bundle()]
+    propulsion: AsepriteBundle,
+}
+
 #[derive(Resource)]
 pub struct PlayerHandles {
     pub spaceship: Handle<Image>,
     pub projectile: Handle<Image>,
+    pub propulsion: Handle<Aseprite>,
 }
 
 #[derive(Resource)]
@@ -131,8 +144,14 @@ pub struct PlayerAssetDimensions {
 fn spawn_spaceship(
     mut commands: Commands,
     player_assets: Res<PlayerHandles>,
+    player_dims: Res<PlayerAssetDimensions>,
     win_size: Res<WinSize>,
+    asesprites: Res<Assets<Aseprite>>,
 ) {
+    let propulsion_handle = &player_assets.propulsion;
+    let propulsion_aseprite = asesprites.get(propulsion_handle).unwrap();
+    let propulsion_animation = AsepriteAnimation::new(propulsion_aseprite.info(), "thrust");
+
     commands.spawn(SpaceshipBundle {
         spaceship: Spaceship,
         entity_type: EntityType::Spaceship,
@@ -151,6 +170,20 @@ fn spawn_spaceship(
                 Spaceship::player_position(win_size.h),
                 consts::PLAYER_Z,
             ),
+            ..default()
+        },
+    });
+
+    let transform_y = Spaceship::player_position(win_size.h) - player_dims.spaceship.y + 13.0;
+
+    commands.spawn(SpaceshipPropulsionBundle {
+        spaceship_propulsion: SpaceshipPropulsion,
+        propulsion: AsepriteBundle {
+            texture_atlas: propulsion_aseprite.atlas().clone_weak(),
+            sprite: TextureAtlasSprite::new(propulsion_animation.current_frame()),
+            aseprite: propulsion_handle.clone_weak(),
+            animation: propulsion_animation,
+            transform: Transform::from_xyz(0., transform_y, consts::PLAYER_PROPULSION_Z),
             ..default()
         },
     });
@@ -183,6 +216,7 @@ pub fn load_player_assets(mut commands: Commands, asset_server: Res<AssetServer>
     let assets = PlayerHandles {
         spaceship: asset_server.load("sprites/spaceship.png"),
         projectile: asset_server.load("sprites/spaceship-projectile.png"),
+        propulsion: asset_server.load("aseprites/spaceship-propulsion.aseprite"),
     };
 
     commands.insert_resource(assets);
@@ -192,6 +226,7 @@ pub fn load_player_asset_dimensions(
     mut commands: Commands,
     images: Res<Assets<Image>>,
     player_assets: Res<PlayerHandles>,
+    asesprites: Res<Assets<Aseprite>>,
 ) {
     let spaceship_size = match images.get(&player_assets.spaceship) {
         Some(image) => image.size(),
@@ -199,6 +234,13 @@ pub fn load_player_asset_dimensions(
     };
     let projectile_size = match images.get(&player_assets.projectile) {
         Some(image) => image.size(),
+        None => return,
+    };
+
+    // TODO create proper asset check method
+    let _propulsion_handle = &player_assets.propulsion;
+    let _propulsion_aseprite = match asesprites.get(&player_assets.propulsion) {
+        Some(aseprite) => aseprite,
         None => return,
     };
 
