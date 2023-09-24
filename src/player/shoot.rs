@@ -9,7 +9,7 @@ use crate::{
     movement::Velocity,
 };
 
-use super::{PlayerAssets, Spaceship, SpaceshipAction};
+use super::{PlayerHandles, Spaceship, SpaceshipAction};
 
 #[derive(Debug)]
 enum ShootingState {
@@ -114,7 +114,7 @@ pub fn spaceship_shoot(
         With<Spaceship>,
     >,
     time: Res<Time>,
-    player_assets: Res<PlayerAssets>,
+    player_assets: Res<PlayerHandles>,
 ) {
     if let Ok((action_state, tf, mut spaceship_shoot)) = player_query.get_single_mut() {
         if spaceship_shoot.state.is_idle() && action_state.just_pressed(SpaceshipAction::Shoot) {

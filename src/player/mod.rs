@@ -115,7 +115,7 @@ struct SpaceshipBundle {
 }
 
 #[derive(Resource)]
-pub struct PlayerAssets {
+pub struct PlayerHandles {
     pub spaceship: Handle<Image>,
     pub projectile: Handle<Image>,
 }
@@ -130,7 +130,7 @@ pub struct PlayerAssetDimensions {
 
 fn spawn_spaceship(
     mut commands: Commands,
-    player_assets: Res<PlayerAssets>,
+    player_assets: Res<PlayerHandles>,
     win_size: Res<WinSize>,
 ) {
     commands.spawn(SpaceshipBundle {
@@ -180,7 +180,7 @@ fn spaceship_invincibility(
 }
 
 pub fn load_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let assets = PlayerAssets {
+    let assets = PlayerHandles {
         spaceship: asset_server.load("sprites/spaceship.png"),
         projectile: asset_server.load("sprites/spaceship-projectile.png"),
     };
@@ -191,7 +191,7 @@ pub fn load_player_assets(mut commands: Commands, asset_server: Res<AssetServer>
 pub fn load_player_asset_dimensions(
     mut commands: Commands,
     images: Res<Assets<Image>>,
-    player_assets: Res<PlayerAssets>,
+    player_assets: Res<PlayerHandles>,
 ) {
     let spaceship_size = match images.get(&player_assets.spaceship) {
         Some(image) => image.size(),
