@@ -12,6 +12,7 @@ bevy = { version = "0.11.0", features = ["dynamic_linking"] }  # feature flag mu
 rand = "0.8"
 leafwing-input-manager = "0.10.0"
 bevy-inspector-egui = "0.19"
+bevy_mod_aseprite = "0.5"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]
